@@ -1,0 +1,18 @@
+[package]
+name = "pba-interface"
+version = "0.1.0"
+description = "A set of interfaces to help grade the FRAME PBA Assignment."
+edition = "2021"
+publish = false
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v1.0.0" }
+
+[features]
+default = ["std"]
+std = [
+	"frame-support/std",
+]
