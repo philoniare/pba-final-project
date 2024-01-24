@@ -139,10 +139,9 @@ pub mod pallet {
 			amount_a: AssetBalanceOf<T>,
 			amount_b: AssetBalanceOf<T>,
 		) -> DispatchResult {
-			// TODO: Make sure assets are sorted
 			let who = ensure_signed(origin)?;
 
-			let pool_asset_pair = AssetPair { asset_a: asset_a.clone(), asset_b: asset_b.clone() };
+			let pool_asset_pair = AssetPair::new(asset_a.clone(), asset_b.clone());
 
 			let pallet_id: T::AccountId = T::PalletId::get().into_account_truncating();
 
@@ -197,7 +196,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let pool_asset_pair = AssetPair { asset_a: asset_a.clone(), asset_b: asset_b.clone() };
+			let pool_asset_pair = AssetPair::new(asset_a.clone(), asset_b.clone());
 			let pool = LiquidityPools::<T>::get(pool_asset_pair.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
 			pool.remove_liquidity(pool_asset_pair, token_amount, &who)?;
@@ -215,8 +214,7 @@ pub mod pallet {
 			amount_in: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let pool_asset_pair =
-				AssetPair { asset_a: asset_in.clone(), asset_b: asset_out.clone() };
+			let pool_asset_pair = AssetPair::new(asset_in.clone(), asset_out.clone());
 			let pool = LiquidityPools::<T>::get(pool_asset_pair.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
 
@@ -232,7 +230,7 @@ pub mod pallet {
 				);
 
 				let amount_out =
-					pool.calc_output(amount_in, token_in_reserve - amount_in, token_out_reserve);
+					pool.calc_output(amount_in, token_in_reserve - amount_in, token_out_reserve)?;
 
 				T::Fungibles::transfer(
 					pool_asset_pair.asset_b,
@@ -258,7 +256,7 @@ pub mod pallet {
 					DispatchError::from(Error::<T>::InsufficientBalance)
 				);
 				let amount_out =
-					pool.calc_output(amount_in, token_in_reserve - amount_in, token_out_reserve);
+					pool.calc_output(amount_in, token_in_reserve - amount_in, token_out_reserve)?;
 
 				T::Fungibles::transfer(
 					pool_asset_pair.asset_a,

@@ -24,9 +24,9 @@ fn mint_works() {
 		let bob = 1;
 		let root = RuntimeOrigin::root();
 		let origin = RuntimeOrigin::signed(ALICE);
-		let initial_amount_a = Dex::expand_to_18_decimals(1u128);
-		let initial_amount_b = Dex::expand_to_18_decimals(4u128);
-		let expected_liquidity = Dex::expand_to_18_decimals(2u128);
+		let initial_amount_a = Dex::expand_to_decimals(1u128);
+		let initial_amount_b = Dex::expand_to_decimals(4u128);
+		let expected_liquidity = Dex::expand_to_decimals(2u128);
 		System::set_block_number(1);
 
 		assert_ok!(Assets::force_create(
@@ -64,7 +64,7 @@ fn mint_works() {
 			initial_amount_b
 		));
 
-		let pool_key = AssetPair { asset_a: ASSET_A, asset_b: ASSET_B };
+		let pool_key = AssetPair::new(ASSET_A, ASSET_B);
 		let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
 
 		// Minting of LP Tokens occurred
@@ -99,9 +99,9 @@ fn burn_works() {
 		let bob = 1;
 		let root = RuntimeOrigin::root();
 		let origin = RuntimeOrigin::signed(ALICE);
-		let initial_amount_a = Dex::expand_to_18_decimals(3u128);
-		let initial_amount_b = Dex::expand_to_18_decimals(3u128);
-		let expected_liquidity = Dex::expand_to_18_decimals(3u128).sub(MIN_LIQUIDITY);
+		let initial_amount_a = Dex::expand_to_decimals(3u128);
+		let initial_amount_b = Dex::expand_to_decimals(3u128);
+		let expected_liquidity = Dex::expand_to_decimals(3u128).sub(MIN_LIQUIDITY);
 		System::set_block_number(1);
 
 		assert_ok!(Assets::force_create(
@@ -139,7 +139,7 @@ fn burn_works() {
 			initial_amount_b
 		));
 
-		let pool_key = AssetPair { asset_a: ASSET_A, asset_b: ASSET_B };
+		let pool_key = AssetPair::new(ASSET_A, ASSET_B);
 		let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
 
 		assert_ok!(Dex::burn(RuntimeOrigin::signed(ALICE), ASSET_A, ASSET_B, expected_liquidity));
@@ -173,11 +173,11 @@ fn burn_works() {
 #[test]
 fn swapping_token_a_works() {
 	new_test_ext().execute_with(|| {
-		let initial_amount_a = Dex::expand_to_18_decimals(50u128);
-		let mint_amount_a = Dex::expand_to_18_decimals(5u128);
+		let initial_amount_a = Dex::expand_to_decimals(50u128);
+		let mint_amount_a = Dex::expand_to_decimals(5u128);
 
-		let initial_amount_b = Dex::expand_to_18_decimals(10u128);
-		let swap_amount = Dex::expand_to_18_decimals(1u128);
+		let initial_amount_b = Dex::expand_to_decimals(10u128);
+		let swap_amount = Dex::expand_to_decimals(1u128);
 		let root = RuntimeOrigin::root();
 
 		assert_ok!(Assets::force_create(
@@ -217,7 +217,58 @@ fn swapping_token_a_works() {
 
 		assert_ok!(Dex::swap(RuntimeOrigin::signed(ALICE), ASSET_A, ASSET_B, swap_amount));
 
-		let pool_key = AssetPair { asset_a: ASSET_A, asset_b: ASSET_B };
+		let pool_key = AssetPair::new(ASSET_A, ASSET_B);
+		let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
+	});
+}
+
+#[test]
+fn swapping_token_b_works() {
+	new_test_ext().execute_with(|| {
+		let initial_amount_a = Dex::expand_to_decimals(50u128);
+		let mint_amount_b = Dex::expand_to_decimals(5u128);
+		let initial_amount_b = Dex::expand_to_decimals(10u128);
+		let swap_amount = Dex::expand_to_decimals(1u128);
+		let root = RuntimeOrigin::root();
+
+		assert_ok!(Assets::force_create(
+			root.clone(),
+			Compact::from(ASSET_A),
+			ADMIN,
+			true,
+			MINT_BALANCE
+		));
+		assert_ok!(Assets::force_create(
+			root.clone(),
+			Compact::from(ASSET_B),
+			ADMIN,
+			true,
+			MINT_BALANCE
+		));
+		assert_ok!(Assets::mint(
+			RuntimeOrigin::signed(ADMIN),
+			Compact::from(ASSET_A),
+			ALICE,
+			initial_amount_a
+		));
+		assert_ok!(Assets::mint(
+			RuntimeOrigin::signed(ADMIN),
+			Compact::from(ASSET_B),
+			ALICE,
+			initial_amount_b
+		));
+
+		assert_ok!(Dex::mint(
+			RuntimeOrigin::signed(ALICE),
+			ASSET_A,
+			ASSET_B,
+			initial_amount_a,
+			mint_amount_b
+		));
+
+		assert_ok!(Dex::swap(RuntimeOrigin::signed(ALICE), ASSET_B, ASSET_A, swap_amount));
+
+		let pool_key = AssetPair::new(ASSET_A, ASSET_B);
 		let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
 	});
 }

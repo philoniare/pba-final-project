@@ -12,6 +12,16 @@ pub struct AssetPair<T: Config> {
 	pub asset_b: AssetIdOf<T>,
 }
 
+impl<T: Config> AssetPair<T> {
+	pub fn new(asset_one: AssetIdOf<T>, asset_two: AssetIdOf<T>) -> Self {
+		if asset_one <= asset_two {
+			AssetPair { asset_a: asset_one, asset_b: asset_two }
+		} else {
+			AssetPair { asset_a: asset_two, asset_b: asset_one }
+		}
+	}
+}
+
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub struct LiquidityPool<T: Config> {
@@ -98,13 +108,23 @@ impl<T: Config> LiquidityPool<T> {
 		amount_in: AssetBalanceOf<T>,
 		reserve_in: AssetBalanceOf<T>,
 		reserve_out: AssetBalanceOf<T>,
-	) -> AssetBalanceOf<T> {
+	) -> Result<AssetBalanceOf<T>, sp_runtime::DispatchError> {
 		if reserve_in == 0 || reserve_out == 0 {
-			return 0;
+			return Ok(AssetBalanceOf::<T>::zero());
 		}
 
-		let amount_without_fee = amount_in * 997;
-		(amount_without_fee * reserve_out) / (1000 * reserve_in + amount_without_fee)
+		let amount_without_fee =
+			amount_in.checked_mul(997u128).ok_or_else(|| Error::<T>::Arithmetic)?;
+		let ratio = amount_without_fee
+			.checked_mul(reserve_out)
+			.ok_or_else(|| Error::<T>::Arithmetic)?;
+		let mut reserve_total =
+			reserve_in.checked_mul(1000u128).ok_or_else(|| Error::<T>::Arithmetic)?;
+		reserve_total = reserve_total
+			.checked_add(amount_without_fee)
+			.ok_or_else(|| Error::<T>::Arithmetic)?;
+		let total = ratio.checked_div(reserve_total).ok_or_else(|| Error::<T>::Arithmetic)?;
+		Ok(total)
 	}
 
 	pub fn add_liquidity(
