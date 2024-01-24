@@ -25,10 +25,15 @@ impl<T: Config> LiquidityPool<T> {
 		amount_a: AssetBalanceOf<T>,
 		amount_b: AssetBalanceOf<T>,
 	) -> Result<AssetBalanceOf<T>, sp_runtime::DispatchError> {
+		let min_liquidity = u128::from(T::MinimumLiquidity::get());
 		let product = amount_a
 			.checked_mul(amount_b)
 			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
-		let liquidity = sqrt(product);
+		// Initial minimum liquidity is locked away
+		let liquidity = sqrt(product)
+			.checked_sub(min_liquidity)
+			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
+		T::Fungibles::mint_into(self.id, &self.manager, min_liquidity)?;
 
 		Ok(liquidity)
 	}
@@ -76,6 +81,30 @@ impl<T: Config> LiquidityPool<T> {
 		)?;
 
 		Ok(())
+	}
+
+	pub fn swap(
+		&self,
+		who: &AccountIdOf<T>,
+		asset_pair: AssetPair<T>,
+		amount_a_out: AssetBalanceOf<T>,
+		amount_b_out: AssetBalanceOf<T>,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	pub fn calc_output(
+		&self,
+		amount_in: AssetBalanceOf<T>,
+		reserve_in: AssetBalanceOf<T>,
+		reserve_out: AssetBalanceOf<T>,
+	) -> AssetBalanceOf<T> {
+		if reserve_in == 0 || reserve_out == 0 {
+			return 0;
+		}
+
+		let amount_without_fee = amount_in * 997;
+		(amount_without_fee * reserve_out) / (1000 * reserve_in + amount_without_fee)
 	}
 
 	pub fn add_liquidity(

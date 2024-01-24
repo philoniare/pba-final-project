@@ -152,6 +152,7 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 	pub const MemeSwapPallet: PalletId = PalletId(*b"MeMeSwap");
 	pub const TokenDecimals: u8 = 18;
+	pub const MinimumLiquidity: u32 = 1000;
 }
 
 // Configure FRAME pallets to include in runtime.

@@ -15,6 +15,7 @@ type Balance = u128;
 parameter_types! {
 	pub const MemeSwapPallet: PalletId = PalletId(*b"MeMeSwap");
 	pub const TokenDecimals: u8 = 18;
+	pub const MinimumLiquidity: u32 = 1000;
 }
 
 // Configure a mock runtime to test the pallet.
@@ -99,6 +100,7 @@ impl pallet_dex::Config for Test {
 	type Fungibles = Assets;
 	type PalletId = MemeSwapPallet;
 	type TokenDecimals = TokenDecimals;
+	type MinimumLiquidity = MinimumLiquidity;
 }
 
 // Build genesis storage according to the mock runtime.

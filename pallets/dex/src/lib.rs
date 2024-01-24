@@ -37,6 +37,7 @@ pub type AssetBalanceOf<T> = <<T as Config>::Fungibles as fungibles::Inspect<
 pub mod pallet {
 	use crate::liquidity_pool::AssetPair;
 	use crate::*;
+	use frame_support::traits::tokens::Preservation;
 	use frame_support::{
 		pallet_prelude::*,
 		traits::{
@@ -72,6 +73,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type TokenDecimals: Get<u8>;
+
+		#[pallet::constant]
+		type MinimumLiquidity: Get<u32>;
 	}
 
 	#[pallet::storage]
@@ -92,9 +96,7 @@ pub mod pallet {
 		/// Event for removing a liquidity from an existing pool
 		LiquidityRemoved(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>),
 		/// Event for swapping exact in for min out
-		SwappedExactIn(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>, AssetBalanceOf<T>),
-		/// Event for swapping max of in for exact out
-		SwappedExactOut(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>, AssetBalanceOf<T>),
+		Swapped(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>),
 	}
 
 	// Errors inform users that something went wrong.
@@ -116,6 +118,14 @@ pub mod pallet {
 		Arithmetic,
 		/// User provides insufficient amount_b that fails to maintain a constant token_a_reserve * token_b_reserve
 		UnsufficientAmountB,
+		/// Missing Parameter
+		MissingParam,
+		/// Insufficient Output Amount for a swap, please provide the output amount
+		InsufficientOutputAmount,
+		/// Liquidity Pool does not have sufficient liquidity for the specified swap
+		InsufficientLiquidity,
+		/// Insufficient Input Amount for a swap, please provide enough input amount
+		InsufficientInputAmount,
 	}
 
 	#[pallet::call]
@@ -192,34 +202,86 @@ pub mod pallet {
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
 			pool.remove_liquidity(pool_asset_pair, token_amount, &who)?;
 
-			// Self::deposit_event(Event::LiquidityRemoved());
+			Self::deposit_event(Event::LiquidityRemoved(asset_a, asset_b, token_amount));
 			Ok(())
 		}
 
 		#[pallet::call_index(2)]
 		#[pallet::weight(Weight::default())]
-		pub fn swap_exact_in_for_out(
+		pub fn swap(
 			origin: OriginFor<T>,
 			asset_in: AssetIdOf<T>,
 			asset_out: AssetIdOf<T>,
-			exact_in: AssetBalanceOf<T>,
-			min_out: AssetBalanceOf<T>,
+			amount_in: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			let pool_asset_pair =
+				AssetPair { asset_a: asset_in.clone(), asset_b: asset_out.clone() };
+			let pool = LiquidityPools::<T>::get(pool_asset_pair.clone())
+				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
 
-			Ok(())
-		}
+			// Swapping for asset_a (asset_out) in the pool with amount_in of asset_in
+			if asset_out == pool_asset_pair.asset_a {
+				let token_in_reserve =
+					T::Fungibles::balance(pool_asset_pair.asset_b, &pool.manager);
+				let token_out_reserve =
+					T::Fungibles::balance(pool_asset_pair.asset_a, &pool.manager);
+				ensure!(
+					token_in_reserve > amount_in && token_out_reserve > 0,
+					Error::<T>::InsufficientLiquidity
+				);
 
-		#[pallet::call_index(3)]
-		#[pallet::weight(Weight::default())]
-		pub fn swap_in_for_exact_out(
-			origin: OriginFor<T>,
-			asset_in: AssetIdOf<T>,
-			asset_out: AssetIdOf<T>,
-			max_in: AssetBalanceOf<T>,
-			exact_out: AssetBalanceOf<T>,
-		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
+				let amount_out =
+					pool.calc_output(amount_in, token_in_reserve - amount_in, token_out_reserve);
+
+				T::Fungibles::transfer(
+					pool_asset_pair.asset_b,
+					&who,
+					&pool.manager,
+					amount_in,
+					Preservation::Expendable,
+				)?;
+				T::Fungibles::transfer(
+					pool_asset_pair.asset_a,
+					&pool.manager,
+					&who,
+					amount_out,
+					Preservation::Expendable,
+				)?;
+			} else if asset_out == pool_asset_pair.asset_b {
+				let token_in_reserve =
+					T::Fungibles::balance(pool_asset_pair.asset_a, &pool.manager);
+				let token_out_reserve =
+					T::Fungibles::balance(pool_asset_pair.asset_b, &pool.manager);
+				ensure!(
+					token_in_reserve > amount_in && token_out_reserve > 0,
+					DispatchError::from(Error::<T>::InsufficientBalance)
+				);
+				let amount_out =
+					pool.calc_output(amount_in, token_in_reserve - amount_in, token_out_reserve);
+
+				T::Fungibles::transfer(
+					pool_asset_pair.asset_a,
+					&who,
+					&pool.manager,
+					amount_in,
+					Preservation::Expendable,
+				)?;
+				T::Fungibles::transfer(
+					pool_asset_pair.asset_b,
+					&pool.manager,
+					&who,
+					amount_out,
+					Preservation::Expendable,
+				)?;
+			}
+
+			// Swapping for asset_b (asset_out) in the pool with amount_in of asset_in
+			Self::deposit_event(Event::Swapped(
+				pool_asset_pair.asset_a,
+				pool_asset_pair.asset_b,
+				amount_in,
+			));
 
 			Ok(())
 		}
