@@ -1,5 +1,6 @@
 use crate::*;
-use sp_runtime::{DispatchError, Perbill};
+use frame_support::traits::tokens::Preservation;
+use sp_runtime::{DispatchError, DispatchResult, Perbill};
 
 impl<T: Config> Pallet<T> {
 	pub(super) fn expand_to_decimals(n: AssetBalanceOf<T>) -> AssetBalanceOf<T> {
@@ -18,6 +19,24 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> LiquidityPool<T> {
+	pub(super) fn transfer_in(
+		&self,
+		asset: AssetIdOf<T>,
+		from: &AccountIdOf<T>,
+		amount: AssetBalanceOf<T>,
+	) -> Result<u128, DispatchError> {
+		T::Fungibles::transfer(asset, from, &self.manager, amount, Preservation::Expendable)
+	}
+
+	pub(super) fn transfer_out(
+		&self,
+		asset: AssetIdOf<T>,
+		to: &AccountIdOf<T>,
+		amount: AssetBalanceOf<T>,
+	) -> Result<u128, DispatchError> {
+		T::Fungibles::transfer(asset, &self.manager, to, amount, Preservation::Expendable)
+	}
+
 	fn checked_operation<F, R>(x: R, y: R, func: F) -> Result<R, DispatchError>
 	where
 		F: Fn(R, R) -> Option<R>,

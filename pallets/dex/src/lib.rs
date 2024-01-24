@@ -128,6 +128,8 @@ pub mod pallet {
 		InsufficientLiquidity,
 		/// Insufficient Input Amount for a swap, please provide enough input amount
 		InsufficientInputAmount,
+		/// Provided assets are the same
+		InvalidAssets,
 	}
 
 	#[pallet::call]
@@ -231,8 +233,11 @@ pub mod pallet {
 					Error::<T>::InsufficientLiquidity
 				);
 
-				let amount_out =
-					pool.calc_output(amount_in, token_in_reserve - amount_in, token_out_reserve)?;
+				let amount_out = pool.calculate_output_for(
+					amount_in,
+					token_in_reserve - amount_in,
+					token_out_reserve,
+				)?;
 
 				T::Fungibles::transfer(
 					pool_asset_pair.asset_b,
@@ -257,8 +262,11 @@ pub mod pallet {
 					token_in_reserve > amount_in && token_out_reserve > 0,
 					DispatchError::from(Error::<T>::InsufficientBalance)
 				);
-				let amount_out =
-					pool.calc_output(amount_in, token_in_reserve - amount_in, token_out_reserve)?;
+				let amount_out = pool.calculate_output_for(
+					amount_in,
+					token_in_reserve - amount_in,
+					token_out_reserve,
+				)?;
 
 				T::Fungibles::transfer(
 					pool_asset_pair.asset_a,
@@ -309,13 +317,15 @@ pub mod pallet {
 			amount_in: Self::Balance,
 			asset_out: Self::AssetId,
 		) -> Result<Self::Balance, DispatchError> {
+			ensure!(asset_in != asset_out, Error::<T>::InvalidAssets);
+
 			let pool_key = AssetPair::new(asset_in, asset_out);
 			let pool = <LiquidityPools<T>>::get(pool_key.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
 
 			let reserve_in = T::Fungibles::balance(asset_in, &pool.manager);
 			let reserve_out = T::Fungibles::balance(asset_out, &pool.manager);
-			pool.calc_output(amount_in, reserve_in, reserve_out)
+			pool.calculate_output_for(amount_in, reserve_in, reserve_out)
 		}
 	}
 }

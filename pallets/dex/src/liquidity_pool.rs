@@ -31,18 +31,6 @@ pub struct LiquidityPool<T: Config> {
 }
 
 impl<T: Config> LiquidityPool<T> {
-	fn calculate_liquidity(
-		&self,
-		amount_a: AssetBalanceOf<T>,
-		amount_b: AssetBalanceOf<T>,
-	) -> Result<AssetBalanceOf<T>, sp_runtime::DispatchError> {
-		let product = Self::safe_mul(amount_a, amount_b)?;
-		let liquidity = Self::safe_sub(sqrt(product), u128::from(T::MinimumLiquidity::get()))?;
-		T::Fungibles::mint_into(self.id, &self.manager, u128::from(T::MinimumLiquidity::get()))?;
-
-		Ok(liquidity)
-	}
-
 	pub fn remove_liquidity(
 		&self,
 		asset_pair: AssetPair<T>,
@@ -90,7 +78,7 @@ impl<T: Config> LiquidityPool<T> {
 		Ok(())
 	}
 
-	pub fn calc_output(
+	pub fn calculate_output_for(
 		&self,
 		amount_in: AssetBalanceOf<T>,
 		reserve_in: AssetBalanceOf<T>,
@@ -109,20 +97,25 @@ impl<T: Config> LiquidityPool<T> {
 		Ok(total)
 	}
 
-	pub fn add_liquidity(
+	fn calculate_liquidity(
 		&self,
-		asset_pair: AssetPair<T>,
+		total_issuance: AssetBalanceOf<T>,
 		amount_a: AssetBalanceOf<T>,
 		amount_b: AssetBalanceOf<T>,
-		who: &AccountIdOf<T>,
-	) -> DispatchResult {
-		let total_issuance = T::Fungibles::total_issuance(self.id);
-		let token_a_reserve = T::Fungibles::balance(asset_pair.asset_a, &self.manager);
-		let token_b_reserve = T::Fungibles::balance(asset_pair.asset_b, &self.manager);
+		token_a_reserve: AssetBalanceOf<T>,
+		token_b_reserve: AssetBalanceOf<T>,
+	) -> Result<AssetBalanceOf<T>, DispatchError> {
 		let zero_balance = AssetBalanceOf::<T>::zero();
 		let mut liquidity = zero_balance;
+
 		if total_issuance == zero_balance {
-			liquidity = self.calculate_liquidity(amount_a, amount_b)?;
+			let product = Self::safe_mul(amount_a, amount_b)?;
+			liquidity = Self::safe_sub(sqrt(product), u128::from(T::MinimumLiquidity::get()))?;
+			T::Fungibles::mint_into(
+				self.id,
+				&self.manager,
+				u128::from(T::MinimumLiquidity::get()),
+			)?;
 		} else {
 			// Get current reserved amounts for each asset
 			let a_ratio = Self::safe_mul(amount_a, total_issuance)?;
@@ -133,7 +126,32 @@ impl<T: Config> LiquidityPool<T> {
 
 			liquidity = min(token_a_amount, token_b_amount);
 		}
-		ensure!(liquidity > zero_balance, Error::<T>::UnsufficientAmountB);
+
+		Ok(liquidity)
+	}
+
+	pub fn add_liquidity(
+		&self,
+		asset_pair: AssetPair<T>,
+		amount_a: AssetBalanceOf<T>,
+		amount_b: AssetBalanceOf<T>,
+		who: &AccountIdOf<T>,
+	) -> DispatchResult {
+		ensure!(amount_a > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientInputAmount);
+		ensure!(amount_b > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientInputAmount);
+
+		let total_issuance = T::Fungibles::total_issuance(self.id);
+		let token_a_reserve = T::Fungibles::balance(asset_pair.asset_a, &self.manager);
+		let token_b_reserve = T::Fungibles::balance(asset_pair.asset_b, &self.manager);
+
+		let liquidity = self.calculate_liquidity(
+			total_issuance,
+			amount_a,
+			amount_b,
+			token_a_reserve,
+			token_b_reserve,
+		)?;
+		ensure!(liquidity > AssetBalanceOf::<T>::zero(), Error::<T>::UnsufficientAmountB);
 
 		T::Fungibles::mint_into(self.id, who, liquidity)?;
 		T::Fungibles::transfer(
