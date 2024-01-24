@@ -1,5 +1,7 @@
 use crate as pallet_dex;
+use frame_support::pallet_prelude::*;
 use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU16, ConstU32, ConstU64};
+use frame_support::{parameter_types, PalletId};
 use frame_system::{EnsureRoot, EnsureSigned};
 use sp_core::H256;
 use sp_runtime::{
@@ -9,6 +11,11 @@ use sp_runtime::{
 
 type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
+
+parameter_types! {
+	pub const MemeSwapPallet: PalletId = PalletId(*b"MeMeSwap");
+	pub const TokenDecimals: u8 = 18;
+}
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -22,10 +29,10 @@ frame_support::construct_runtime!(
 );
 
 impl frame_system::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
-	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type Nonce = u64;
@@ -34,8 +41,8 @@ impl frame_system::Config for Test {
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Block = Block;
-	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = ConstU64<250>;
+	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<Balance>;
@@ -48,17 +55,17 @@ impl frame_system::Config for Test {
 }
 
 impl pallet_balances::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
 	type Balance = Balance;
 	type DustRemoval = ();
-	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ConstU128<1>;
 	type AccountStore = System;
-	type WeightInfo = ();
-	type MaxLocks = ConstU32<10>;
-	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type RuntimeHoldReason = ();
 	type FreezeIdentifier = ();
+	type MaxLocks = ConstU32<10>;
+	type MaxReserves = ();
 	type MaxHolds = ConstU32<10>;
 	type MaxFreezes = ConstU32<10>;
 }
@@ -66,6 +73,7 @@ impl pallet_balances::Config for Test {
 impl pallet_assets::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
+	type RemoveItemsLimit = ConstU32<1000>;
 	type AssetId = u32;
 	type AssetIdParameter = codec::Compact<u32>;
 	type Currency = Balances;
@@ -81,7 +89,6 @@ impl pallet_assets::Config for Test {
 	type Extra = ();
 	type CallbackHandle = ();
 	type WeightInfo = ();
-	type RemoveItemsLimit = ConstU32<1000>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 }
@@ -90,6 +97,8 @@ impl pallet_dex::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type NativeBalance = Balances;
 	type Fungibles = Assets;
+	type PalletId = MemeSwapPallet;
+	type TokenDecimals = TokenDecimals;
 }
 
 // Build genesis storage according to the mock runtime.

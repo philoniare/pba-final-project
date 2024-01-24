@@ -1,13 +1,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{pallet_prelude::*, traits::fungibles};
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// <https://docs.substrate.io/reference/frame-pallets/>
+use crate::liquidity_pool::LiquidityPool;
+use frame_support::sp_runtime::traits::{One, Zero};
+use frame_support::traits::fungibles;
+use frame_support::PalletId;
 pub use pallet::*;
 
+mod liquidity_pool;
 #[cfg(test)]
 mod mock;
+mod util;
 
 #[cfg(test)]
 mod tests;
@@ -16,7 +18,9 @@ mod tests;
 mod benchmarking;
 
 use frame_support::traits::fungible;
+use frame_support::traits::fungibles::*;
 
+pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type AssetIdOf<T> = <<T as Config>::Fungibles as fungibles::Inspect<
 	<T as frame_system::Config>::AccountId,
 >>::AssetId;
@@ -31,19 +35,23 @@ pub type AssetBalanceOf<T> = <<T as Config>::Fungibles as fungibles::Inspect<
 
 #[frame_support::pallet]
 pub mod pallet {
+	use crate::liquidity_pool::AssetPair;
+	use crate::*;
 	use frame_support::{
 		pallet_prelude::*,
-		traits::{fungible, fungibles},
+		traits::{
+			fungible::{self, *},
+			fungibles::{self, *},
+		},
 	};
 	use frame_system::pallet_prelude::*;
+	use sp_runtime::traits::AccountIdConversion;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
-	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Type to access the Balances Pallet.
@@ -55,160 +63,165 @@ pub mod pallet {
 			+ fungible::freeze::Mutate<Self::AccountId>;
 
 		/// Type to access the Assets Pallet.
-		type Fungibles: fungibles::Inspect<Self::AccountId>
+		type Fungibles: fungibles::Inspect<Self::AccountId, AssetId = u32, Balance = u128>
 			+ fungibles::Mutate<Self::AccountId>
 			+ fungibles::Create<Self::AccountId>;
+
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
+
+		#[pallet::constant]
+		type TokenDecimals: Get<u8>;
 	}
 
-	// The pallet's runtime storage items.
-	// https://docs.substrate.io/main-docs/build/runtime-storage/
 	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	// Learn more about declaring storage items:
-	// https://docs.substrate.io/main-docs/build/runtime-storage/#declaring-storage-items
-	pub type Something<T> = StorageValue<_, u32>;
+	pub type LiquidityPools<T: Config> =
+		StorageMap<_, Blake2_128Concat, AssetPair<T>, LiquidityPool<T>>;
 
-	// Pallets use events to inform users when important changes are made.
-	// https://docs.substrate.io/main-docs/build/events-errors/
+	#[pallet::storage]
+	#[pallet::getter(fn asset_counter)]
+	pub type AssetCounter<T: Config> = StorageValue<_, AssetIdOf<T>, ValueQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Event documentation should end with an array that provides descriptive names for event
-		/// parameters. [something, who]
-		SomethingStored { something: u32, who: T::AccountId },
+		/// Event for a new liquidity pool creation
+		LiquidityPoolCreated(AssetIdOf<T>, AssetIdOf<T>),
+		/// Event for adding a liquidity to an existing pool
+		LiquidityAdded(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>, AssetBalanceOf<T>),
+		/// Event for removing a liquidity from an existing pool
+		LiquidityRemoved(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>),
+		/// Event for swapping exact in for min out
+		SwappedExactIn(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>, AssetBalanceOf<T>),
+		/// Event for swapping max of in for exact out
+		SwappedExactOut(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>, AssetBalanceOf<T>),
 	}
 
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
-		NoneValue,
-		/// Errors should have helpful documentation associated with them.
+		/// User balance insufficient to cover the cost of the operation
+		InsufficientBalance,
+		/// Invalid amount provided for the amount field
+		InvalidAmount,
+		/// Provided AssetId is not registered
+		UnknownAssetId,
+		/// Arithmetic overflow occurred during calculation
 		StorageOverflow,
+		/// Liquidity Pool does not exist
+		LiquidityPoolDoesNotExist,
+		/// Overflow for asset id counter
+		AssetLimitReached,
+		/// Arithmetic Error when multiplying and dividing
+		Arithmetic,
+		/// User provides insufficient amount_b that fails to maintain a constant token_a_reserve * token_b_reserve
+		UnsufficientAmountB,
 	}
 
-	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-	// These functions materialize as "extrinsics", which are often compared to transactions.
-	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::call_index(0)]
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
-		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://docs.substrate.io/main-docs/build/origins/
+		#[pallet::weight(Weight::default())]
+		pub fn mint(
+			origin: OriginFor<T>,
+			asset_a: AssetIdOf<T>,
+			asset_b: AssetIdOf<T>,
+			amount_a: AssetBalanceOf<T>,
+			amount_b: AssetBalanceOf<T>,
+		) -> DispatchResult {
+			// TODO: Make sure assets are sorted
 			let who = ensure_signed(origin)?;
 
-			// Update storage.
-			<Something<T>>::put(something);
+			let pool_asset_pair = AssetPair { asset_a: asset_a.clone(), asset_b: asset_b.clone() };
 
-			// Emit an event.
-			Self::deposit_event(Event::SomethingStored { something, who });
-			// Return a successful DispatchResultWithPostInfo
+			let pallet_id: T::AccountId = T::PalletId::get().into_account_truncating();
+
+			let pool = match LiquidityPools::<T>::get(pool_asset_pair.clone()) {
+				Some(existing_pool) => existing_pool,
+				None => {
+					// Create the token for this pool
+					let mut asset_counter = AssetCounter::<T>::get();
+
+					// Create the asset with a specific asset_id
+					T::Fungibles::create(
+						asset_counter.clone(),
+						pallet_id.clone(),
+						true,
+						AssetBalanceOf::<T>::one(),
+					)?;
+
+					// Create the liquidity pool if it doesn't exist
+					let new_pool = LiquidityPool { id: asset_counter, manager: pallet_id };
+
+					<LiquidityPools<T>>::set(pool_asset_pair.clone(), Some(new_pool.clone()));
+
+					Self::deposit_event(crate::pallet::Event::LiquidityPoolCreated(
+						asset_a, asset_b,
+					));
+
+					// Increment counter for keeping track of asset_id
+					asset_counter =
+						asset_counter.checked_add(1).ok_or(Error::<T>::AssetLimitReached)?;
+
+					new_pool
+				},
+			};
+
+			// Add initial liquidity
+			pool.add_liquidity(pool_asset_pair, amount_a, amount_b, &who)?;
+
+			Self::deposit_event(crate::pallet::Event::LiquidityAdded(
+				asset_a, asset_b, amount_a, amount_b,
+			));
+
 			Ok(())
 		}
 
-		/// An example dispatchable that may throw a custom error.
 		#[pallet::call_index(1)]
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
-		pub fn cause_error(origin: OriginFor<T>) -> DispatchResult {
-			let _who = ensure_signed(origin)?;
+		#[pallet::weight(Weight::default())]
+		pub fn burn(
+			origin: OriginFor<T>,
+			asset_a: AssetIdOf<T>,
+			asset_b: AssetIdOf<T>,
+			token_amount: AssetBalanceOf<T>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
 
-			// Read a value from storage.
-			match <Something<T>>::get() {
-				// Return an error if the value has not been set.
-				None => Err(Error::<T>::NoneValue.into()),
-				Some(old) => {
-					// Increment the value read from storage; will error in the event of overflow.
-					let new = old.checked_add(1).ok_or(Error::<T>::StorageOverflow)?;
-					// Update the value in storage with the incremented result.
-					<Something<T>>::put(new);
-					Ok(())
-				},
-			}
+			let pool_asset_pair = AssetPair { asset_a: asset_a.clone(), asset_b: asset_b.clone() };
+			let pool = LiquidityPools::<T>::get(pool_asset_pair.clone())
+				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
+			pool.remove_liquidity(pool_asset_pair, token_amount, &who)?;
+
+			// Self::deposit_event(Event::LiquidityRemoved());
+			Ok(())
 		}
-	}
-}
 
-// Look at `../interface/` to better understand this API.
-impl<T: Config> pba_interface::DexInterface for Pallet<T> {
-	type AccountId = T::AccountId;
-	type AssetId = <T::Fungibles as fungibles::Inspect<Self::AccountId>>::AssetId;
-	type AssetBalance = <T::Fungibles as fungibles::Inspect<Self::AccountId>>::Balance;
+		#[pallet::call_index(2)]
+		#[pallet::weight(Weight::default())]
+		pub fn swap_exact_in_for_out(
+			origin: OriginFor<T>,
+			asset_in: AssetIdOf<T>,
+			asset_out: AssetIdOf<T>,
+			exact_in: AssetBalanceOf<T>,
+			min_out: AssetBalanceOf<T>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
 
-	fn setup_account(_who: Self::AccountId) -> DispatchResult {
-		unimplemented!()
-	}
+			Ok(())
+		}
 
-	fn mint_asset(
-		_who: Self::AccountId,
-		_token_id: Self::AssetId,
-		_amount: Self::AssetBalance,
-	) -> DispatchResult {
-		unimplemented!()
-	}
+		#[pallet::call_index(3)]
+		#[pallet::weight(Weight::default())]
+		pub fn swap_in_for_exact_out(
+			origin: OriginFor<T>,
+			asset_in: AssetIdOf<T>,
+			asset_out: AssetIdOf<T>,
+			max_in: AssetBalanceOf<T>,
+			exact_out: AssetBalanceOf<T>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
 
-	fn asset_balance(_who: Self::AccountId, _token_id: Self::AssetId) -> Self::AssetBalance {
-		unimplemented!()
-	}
-
-	fn swap_fee() -> sp_runtime::Perbill {
-		unimplemented!()
-	}
-
-	fn lp_id(_asset_a: Self::AssetId, _asset_b: Self::AssetId) -> Self::AssetId {
-		unimplemented!()
-	}
-
-	fn create_liquidity_pool(
-		_who: Self::AccountId,
-		_asset_a: Self::AssetId,
-		_asset_b: Self::AssetId,
-		_amount_a: Self::AssetBalance,
-		_amount_b: Self::AssetBalance,
-	) -> DispatchResult {
-		unimplemented!()
-	}
-
-	fn add_liquidity(
-		_who: Self::AccountId,
-		_asset_a: Self::AssetId,
-		_asset_b: Self::AssetId,
-		_amount_a: Self::AssetBalance,
-		_amount_b: Self::AssetBalance,
-	) -> DispatchResult {
-		unimplemented!()
-	}
-
-	fn remove_liquidity(
-		_who: Self::AccountId,
-		_asset_a: Self::AssetId,
-		_asset_b: Self::AssetId,
-		_token_amount: Self::AssetBalance,
-	) -> DispatchResult {
-		unimplemented!()
-	}
-
-	fn swap_exact_in_for_out(
-		_who: Self::AccountId,
-		_asset_in: Self::AssetId,
-		_asset_out: Self::AssetId,
-		_exact_in: Self::AssetBalance,
-		_min_out: Self::AssetBalance,
-	) -> DispatchResult {
-		unimplemented!()
-	}
-
-	fn swap_in_for_exact_out(
-		_origin: Self::AccountId,
-		_asset_in: Self::AssetId,
-		_asset_out: Self::AssetId,
-		_max_in: Self::AssetBalance,
-		_exact_out: Self::AssetBalance,
-	) -> DispatchResult {
-		unimplemented!()
+			Ok(())
+		}
 	}
 }
