@@ -5,6 +5,7 @@ use frame_support::sp_runtime::traits::{One, Zero};
 use frame_support::traits::fungibles;
 use frame_support::PalletId;
 pub use pallet::*;
+use sp_runtime::Perbill;
 
 mod liquidity_pool;
 #[cfg(test)]
@@ -16,6 +17,7 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+mod traits;
 
 use frame_support::traits::fungible;
 use frame_support::traits::fungibles::*;
@@ -282,6 +284,38 @@ pub mod pallet {
 			));
 
 			Ok(())
+		}
+	}
+
+	impl<T: Config> traits::TokenRatio for Pallet<T> {
+		type AssetId = AssetIdOf<T>;
+		fn ratio(token_a: Self::AssetId, token_b: Self::AssetId) -> Result<Perbill, DispatchError> {
+			let pool_key = AssetPair::new(token_a, token_b);
+			let pool = <LiquidityPools<T>>::get(pool_key.clone())
+				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
+			let token_a_reserve = T::Fungibles::balance(pool_key.asset_a, &pool.manager);
+			let token_b_reserve = T::Fungibles::balance(pool_key.asset_b, &pool.manager);
+			Self::calculate_perbill_ratio(token_a_reserve, token_b_reserve)
+				.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))
+		}
+	}
+
+	impl<T: Config> traits::OraclePrice for Pallet<T> {
+		type AssetId = AssetIdOf<T>;
+		type Balance = AssetBalanceOf<T>;
+
+		fn get_price_for(
+			asset_in: Self::AssetId,
+			amount_in: Self::Balance,
+			asset_out: Self::AssetId,
+		) -> Result<Self::Balance, DispatchError> {
+			let pool_key = AssetPair::new(asset_in, asset_out);
+			let pool = <LiquidityPools<T>>::get(pool_key.clone())
+				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
+
+			let reserve_in = T::Fungibles::balance(asset_in, &pool.manager);
+			let reserve_out = T::Fungibles::balance(asset_out, &pool.manager);
+			pool.calc_output(amount_in, reserve_in, reserve_out)
 		}
 	}
 }

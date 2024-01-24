@@ -1,9 +1,11 @@
 use crate::liquidity_pool::AssetPair;
+use crate::traits::{OraclePrice, TokenRatio};
 use crate::{mock::*, AssetBalanceOf, Config, Error, Event, LiquidityPools, Pallet};
 use codec::Compact;
 use frame_support::pallet_prelude::*;
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::Perbill;
 use std::ops::Sub;
 
 const ASSET_A: u32 = 1u32;
@@ -270,5 +272,97 @@ fn swapping_token_b_works() {
 
 		let pool_key = AssetPair::new(ASSET_A, ASSET_B);
 		let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
+	});
+}
+
+#[test]
+fn fetching_token_ratio_works() {
+	new_test_ext().execute_with(|| {
+		let initial_amount_a = Dex::expand_to_decimals(10u128);
+		let initial_amount_b = Dex::expand_to_decimals(50u128);
+		let root = RuntimeOrigin::root();
+
+		assert_ok!(Assets::force_create(
+			root.clone(),
+			Compact::from(ASSET_A),
+			ADMIN,
+			true,
+			MINT_BALANCE
+		));
+		assert_ok!(Assets::force_create(
+			root.clone(),
+			Compact::from(ASSET_B),
+			ADMIN,
+			true,
+			MINT_BALANCE
+		));
+		assert_ok!(Assets::mint(
+			RuntimeOrigin::signed(ADMIN),
+			Compact::from(ASSET_A),
+			ALICE,
+			initial_amount_a
+		));
+		assert_ok!(Assets::mint(
+			RuntimeOrigin::signed(ADMIN),
+			Compact::from(ASSET_B),
+			ALICE,
+			initial_amount_b
+		));
+
+		assert_ok!(Dex::mint(
+			RuntimeOrigin::signed(ALICE),
+			ASSET_A,
+			ASSET_B,
+			initial_amount_a,
+			initial_amount_b,
+		));
+
+		assert_eq!(Dex::ratio(ASSET_A, ASSET_B), Ok(Perbill::from_percent(20)));
+	});
+}
+
+#[test]
+fn fetching_price_for_works() {
+	new_test_ext().execute_with(|| {
+		let initial_amount_a = Dex::expand_to_decimals(10u128);
+		let initial_amount_b = Dex::expand_to_decimals(50u128);
+		let root = RuntimeOrigin::root();
+
+		assert_ok!(Assets::force_create(
+			root.clone(),
+			Compact::from(ASSET_A),
+			ADMIN,
+			true,
+			MINT_BALANCE
+		));
+		assert_ok!(Assets::force_create(
+			root.clone(),
+			Compact::from(ASSET_B),
+			ADMIN,
+			true,
+			MINT_BALANCE
+		));
+		assert_ok!(Assets::mint(
+			RuntimeOrigin::signed(ADMIN),
+			Compact::from(ASSET_A),
+			ALICE,
+			initial_amount_a
+		));
+		assert_ok!(Assets::mint(
+			RuntimeOrigin::signed(ADMIN),
+			Compact::from(ASSET_B),
+			ALICE,
+			initial_amount_b
+		));
+
+		assert_ok!(Dex::mint(
+			RuntimeOrigin::signed(ALICE),
+			ASSET_A,
+			ASSET_B,
+			initial_amount_a,
+			initial_amount_b,
+		));
+
+		assert_eq!(Dex::get_price_for(ASSET_A, 1, ASSET_B), Ok(4));
 	});
 }
