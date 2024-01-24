@@ -7,7 +7,6 @@ use frame_support::{assert_noop, assert_ok};
 use sp_runtime::traits::AccountIdConversion;
 use sp_runtime::Perbill;
 use std::ops::Sub;
-
 const ASSET_A: u32 = 1u32;
 const ASSET_B: u32 = 2u32;
 const ADMIN: u64 = 1;
@@ -15,49 +14,31 @@ const MINT_BALANCE: u128 = 1;
 const ALICE: u64 = 111;
 const PALLET: u64 = 9999;
 const MIN_LIQUIDITY: u128 = 1000;
-
 type NativeBalance = <Test as crate::Config>::NativeBalance;
 type Fungibles = <Test as crate::Config>::Fungibles;
+
+fn create_and_mint(
+	root: RuntimeOrigin,
+	asset: u32,
+	admin: u64,
+	user: u64,
+	amount: u128,
+) -> Result<(), &'static str> {
+	assert_ok!(Assets::force_create(root.clone(), Compact::from(asset), admin, true, MINT_BALANCE));
+	assert_ok!(Assets::mint(RuntimeOrigin::signed(admin), Compact::from(asset), user, amount));
+	Ok(())
+}
 
 #[test]
 fn mint_works() {
 	new_test_ext().execute_with(|| {
-		let alice = 0;
-		let bob = 1;
 		let root = RuntimeOrigin::root();
-		let origin = RuntimeOrigin::signed(ALICE);
 		let initial_amount_a = Dex::expand_to_decimals(1u128);
 		let initial_amount_b = Dex::expand_to_decimals(4u128);
 		let expected_liquidity = Dex::expand_to_decimals(2u128);
 		System::set_block_number(1);
-
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_A),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_B),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_A),
-			ALICE,
-			initial_amount_a
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_B),
-			ALICE,
-			initial_amount_b
-		));
-
+		assert_ok!(create_and_mint(root.clone(), ASSET_A, ADMIN, ALICE, initial_amount_a));
+		assert_ok!(create_and_mint(root.clone(), ASSET_B, ADMIN, ALICE, initial_amount_b));
 		assert_ok!(Dex::mint(
 			RuntimeOrigin::signed(ALICE),
 			ASSET_A,
@@ -97,41 +78,13 @@ fn mint_works() {
 #[test]
 fn burn_works() {
 	new_test_ext().execute_with(|| {
-		let alice = 0;
-		let bob = 1;
 		let root = RuntimeOrigin::root();
-		let origin = RuntimeOrigin::signed(ALICE);
 		let initial_amount_a = Dex::expand_to_decimals(3u128);
 		let initial_amount_b = Dex::expand_to_decimals(3u128);
 		let expected_liquidity = Dex::expand_to_decimals(3u128).sub(MIN_LIQUIDITY);
 		System::set_block_number(1);
-
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_A),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_B),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_A),
-			ALICE,
-			initial_amount_a
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_B),
-			ALICE,
-			initial_amount_b
-		));
+		assert_ok!(create_and_mint(root.clone(), ASSET_A, ADMIN, ALICE, initial_amount_a));
+		assert_ok!(create_and_mint(root.clone(), ASSET_B, ADMIN, ALICE, initial_amount_b));
 
 		assert_ok!(Dex::mint(
 			RuntimeOrigin::signed(ALICE),
@@ -177,37 +130,11 @@ fn swapping_token_a_works() {
 	new_test_ext().execute_with(|| {
 		let initial_amount_a = Dex::expand_to_decimals(50u128);
 		let mint_amount_a = Dex::expand_to_decimals(5u128);
-
 		let initial_amount_b = Dex::expand_to_decimals(10u128);
 		let swap_amount = Dex::expand_to_decimals(1u128);
 		let root = RuntimeOrigin::root();
-
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_A),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_B),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_A),
-			ALICE,
-			initial_amount_a
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_B),
-			ALICE,
-			initial_amount_b
-		));
+		assert_ok!(create_and_mint(root.clone(), ASSET_A, ADMIN, ALICE, initial_amount_a));
+		assert_ok!(create_and_mint(root.clone(), ASSET_B, ADMIN, ALICE, initial_amount_b));
 
 		assert_ok!(Dex::mint(
 			RuntimeOrigin::signed(ALICE),
@@ -232,33 +159,8 @@ fn swapping_token_b_works() {
 		let initial_amount_b = Dex::expand_to_decimals(10u128);
 		let swap_amount = Dex::expand_to_decimals(1u128);
 		let root = RuntimeOrigin::root();
-
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_A),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_B),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_A),
-			ALICE,
-			initial_amount_a
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_B),
-			ALICE,
-			initial_amount_b
-		));
+		assert_ok!(create_and_mint(root.clone(), ASSET_A, ADMIN, ALICE, initial_amount_a));
+		assert_ok!(create_and_mint(root.clone(), ASSET_B, ADMIN, ALICE, initial_amount_b));
 
 		assert_ok!(Dex::mint(
 			RuntimeOrigin::signed(ALICE),
@@ -281,33 +183,8 @@ fn fetching_token_ratio_works() {
 		let initial_amount_a = Dex::expand_to_decimals(10u128);
 		let initial_amount_b = Dex::expand_to_decimals(50u128);
 		let root = RuntimeOrigin::root();
-
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_A),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_B),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_A),
-			ALICE,
-			initial_amount_a
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_B),
-			ALICE,
-			initial_amount_b
-		));
+		assert_ok!(create_and_mint(root.clone(), ASSET_A, ADMIN, ALICE, initial_amount_a));
+		assert_ok!(create_and_mint(root.clone(), ASSET_B, ADMIN, ALICE, initial_amount_b));
 
 		assert_ok!(Dex::mint(
 			RuntimeOrigin::signed(ALICE),
@@ -327,33 +204,8 @@ fn fetching_price_for_works() {
 		let initial_amount_a = Dex::expand_to_decimals(10u128);
 		let initial_amount_b = Dex::expand_to_decimals(50u128);
 		let root = RuntimeOrigin::root();
-
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_A),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::force_create(
-			root.clone(),
-			Compact::from(ASSET_B),
-			ADMIN,
-			true,
-			MINT_BALANCE
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_A),
-			ALICE,
-			initial_amount_a
-		));
-		assert_ok!(Assets::mint(
-			RuntimeOrigin::signed(ADMIN),
-			Compact::from(ASSET_B),
-			ALICE,
-			initial_amount_b
-		));
+		assert_ok!(create_and_mint(root.clone(), ASSET_A, ADMIN, ALICE, initial_amount_a));
+		assert_ok!(create_and_mint(root.clone(), ASSET_B, ADMIN, ALICE, initial_amount_b));
 
 		assert_ok!(Dex::mint(
 			RuntimeOrigin::signed(ALICE),

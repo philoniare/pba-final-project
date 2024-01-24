@@ -36,15 +36,9 @@ impl<T: Config> LiquidityPool<T> {
 		amount_a: AssetBalanceOf<T>,
 		amount_b: AssetBalanceOf<T>,
 	) -> Result<AssetBalanceOf<T>, sp_runtime::DispatchError> {
-		let min_liquidity = u128::from(T::MinimumLiquidity::get());
-		let product = amount_a
-			.checked_mul(amount_b)
-			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
-		// Initial minimum liquidity is locked away
-		let liquidity = sqrt(product)
-			.checked_sub(min_liquidity)
-			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
-		T::Fungibles::mint_into(self.id, &self.manager, min_liquidity)?;
+		let product = Self::safe_mul(amount_a, amount_b)?;
+		let liquidity = Self::safe_sub(sqrt(product), u128::from(T::MinimumLiquidity::get()))?;
+		T::Fungibles::mint_into(self.id, &self.manager, u128::from(T::MinimumLiquidity::get()))?;
 
 		Ok(liquidity)
 	}
@@ -59,18 +53,10 @@ impl<T: Config> LiquidityPool<T> {
 		let token_a_reserve = T::Fungibles::balance(asset_pair.asset_a, &self.manager);
 		let token_b_reserve = T::Fungibles::balance(asset_pair.asset_b, &self.manager);
 
-		let ratio_a = liquidity
-			.checked_mul(token_a_reserve)
-			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
-		let ratio_b = liquidity
-			.checked_mul(token_b_reserve)
-			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
-		let amount_a = ratio_a
-			.checked_div(total_issuance)
-			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
-		let amount_b = ratio_b
-			.checked_div(total_issuance)
-			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
+		let ratio_a = Self::safe_mul(liquidity, token_a_reserve)?;
+		let ratio_b = Self::safe_mul(liquidity, token_b_reserve)?;
+		let amount_a = Self::safe_div(ratio_a, total_issuance)?;
+		let amount_b = Self::safe_div(ratio_b, total_issuance)?;
 
 		// Burn the LP token
 		T::Fungibles::burn_from(self.id, who, liquidity, Precision::Exact, Fortitude::Polite)?;
@@ -109,22 +95,17 @@ impl<T: Config> LiquidityPool<T> {
 		amount_in: AssetBalanceOf<T>,
 		reserve_in: AssetBalanceOf<T>,
 		reserve_out: AssetBalanceOf<T>,
-	) -> Result<AssetBalanceOf<T>, sp_runtime::DispatchError> {
-		if reserve_in == 0 || reserve_out == 0 {
+	) -> Result<AssetBalanceOf<T>, DispatchError> {
+		if reserve_in.is_zero() || reserve_out.is_zero() {
 			return Ok(AssetBalanceOf::<T>::zero());
 		}
 
-		let amount_without_fee =
-			amount_in.checked_mul(997u128).ok_or_else(|| Error::<T>::Arithmetic)?;
-		let ratio = amount_without_fee
-			.checked_mul(reserve_out)
-			.ok_or_else(|| Error::<T>::Arithmetic)?;
-		let mut reserve_total =
-			reserve_in.checked_mul(1000u128).ok_or_else(|| Error::<T>::Arithmetic)?;
-		reserve_total = reserve_total
-			.checked_add(amount_without_fee)
-			.ok_or_else(|| Error::<T>::Arithmetic)?;
-		let total = ratio.checked_div(reserve_total).ok_or_else(|| Error::<T>::Arithmetic)?;
+		let amount_without_fee = Self::safe_mul(amount_in, 997u128)?;
+		let ratio = Self::safe_mul(amount_without_fee, reserve_out)?;
+		let mut reserve_total = Self::safe_mul(reserve_in, 1000u128)?;
+		reserve_total = Self::safe_add(reserve_total, amount_without_fee)?;
+		let total = Self::safe_div(ratio, reserve_total)?;
+
 		Ok(total)
 	}
 
@@ -138,26 +119,21 @@ impl<T: Config> LiquidityPool<T> {
 		let total_issuance = T::Fungibles::total_issuance(self.id);
 		let token_a_reserve = T::Fungibles::balance(asset_pair.asset_a, &self.manager);
 		let token_b_reserve = T::Fungibles::balance(asset_pair.asset_b, &self.manager);
-		let mut liquidity = 0u128;
-		if total_issuance == <AssetBalanceOf<T>>::default() {
+		let zero_balance = AssetBalanceOf::<T>::zero();
+		let mut liquidity = zero_balance;
+		if total_issuance == zero_balance {
 			liquidity = self.calculate_liquidity(amount_a, amount_b)?;
 		} else {
 			// Get current reserved amounts for each asset
-			let a_ratio =
-				amount_a.checked_mul(total_issuance).ok_or_else(|| Error::<T>::Arithmetic)?;
+			let a_ratio = Self::safe_mul(amount_a, total_issuance)?;
+			let token_a_amount = Self::safe_div(a_ratio, token_a_reserve)?;
 
-			let token_a_amount =
-				a_ratio.checked_div(token_a_reserve).ok_or_else(|| Error::<T>::Arithmetic)?;
-
-			let b_ratio =
-				amount_b.checked_mul(total_issuance).ok_or_else(|| Error::<T>::Arithmetic)?;
-
-			let token_b_amount =
-				b_ratio.checked_div(token_b_reserve).ok_or_else(|| Error::<T>::Arithmetic)?;
+			let b_ratio = Self::safe_mul(amount_b, total_issuance)?;
+			let token_b_amount = Self::safe_div(b_ratio, token_b_reserve)?;
 
 			liquidity = min(token_a_amount, token_b_amount);
 		}
-		ensure!(liquidity > 0, Error::<T>::UnsufficientAmountB);
+		ensure!(liquidity > zero_balance, Error::<T>::UnsufficientAmountB);
 
 		T::Fungibles::mint_into(self.id, who, liquidity)?;
 		T::Fungibles::transfer(
