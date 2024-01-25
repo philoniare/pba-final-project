@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["pallet"],"type":["AccountIdOf","AssetBalanceOf","AssetIdOf","BalanceOf"]};
