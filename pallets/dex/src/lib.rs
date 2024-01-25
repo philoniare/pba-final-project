@@ -83,7 +83,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn asset_counter)]
-	pub type AssetCounter<T: Config> = StorageValue<_, AssetIdOf<T>, ValueQuery>;
+	pub type AssetCounter<T: Config> = StorageValue<_, AssetIdOf<T>>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -176,7 +176,10 @@ pub mod pallet {
 				Some(existing_pool) => existing_pool,
 				None => {
 					// Create the token for this pool
-					let mut asset_counter = AssetCounter::<T>::get();
+					let mut asset_counter = match AssetCounter::<T>::get() {
+						Some(current_count) => current_count,
+						None => AssetIdOf::<T>::MAX,
+					};
 
 					// Create the asset with a specific asset_id
 					T::Fungibles::create(
@@ -197,9 +200,9 @@ pub mod pallet {
 
 					// Increment counter for keeping track of asset_id
 					asset_counter =
-						asset_counter.checked_add(1).ok_or(Error::<T>::AssetLimitReached)?;
+						asset_counter.checked_sub(1).ok_or(Error::<T>::AssetLimitReached)?;
 
-					AssetCounter::<T>::set(asset_counter);
+					AssetCounter::<T>::set(Some(asset_counter));
 
 					new_pool
 				},

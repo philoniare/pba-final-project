@@ -1,6 +1,6 @@
 use crate::tests::mock::*;
 use crate::types::{AssetPair, LiquidityPool};
-use crate::{Error, Event, LiquidityPools};
+use crate::{AssetIdOf, Error, Event, LiquidityPools};
 use frame_support::{assert_noop, assert_ok};
 
 #[test]
@@ -89,7 +89,7 @@ fn mint_works_increments_counter_on_multiple_pools() {
 			// Minting of LP Tokens occurred
 			assert_eq!(Fungibles::total_supply(pool.id), expected_liquidity);
 			assert_eq!(Fungibles::balance(pool.id, ALICE), expected_liquidity - MIN_LIQUIDITY);
-			assert_eq!(pool.id, 1);
+			assert_eq!(pool.id, AssetIdOf::<Test>::MAX - 1);
 		});
 }
 
