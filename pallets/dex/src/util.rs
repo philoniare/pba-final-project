@@ -1,9 +1,7 @@
 use crate::*;
 use frame_support::ensure;
 use frame_support::traits::tokens::{Fortitude, Precision, Preservation};
-use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
-use rust_decimal::Decimal;
-use sp_runtime::{DispatchError, Perbill};
+use sp_runtime::{DispatchError, FixedPointNumber, FixedU128, Perbill, Saturating};
 
 impl<T: Config> Pallet<T> {
 	pub(super) fn expand_to_decimals(n: AssetBalanceOf<T>) -> AssetBalanceOf<T> {
@@ -11,12 +9,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub(super) fn decimals_to_numeric(n: AssetBalanceOf<T>) -> AssetBalanceOf<T> {
-		let decimal = Decimal::from_u128(n).expect("already a u128; qed");
-		let numerator: Decimal = 10u128.pow(10u32).into();
-		(decimal / numerator)
-			.round()
-			.to_u128()
-			.expect("only called from tests; can panic")
+		FixedU128::from_inner(n).div(10u128.pow(10u32).into()).into_inner()
 	}
 
 	pub(super) fn calculate_perbill_ratio(numerator: u128, denominator: u128) -> Option<Perbill> {
