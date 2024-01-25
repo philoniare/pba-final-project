@@ -1,19 +1,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use crate::liquidity_pool::LiquidityPool;
+use crate::types::LiquidityPool;
 use frame_support::sp_runtime::traits::{One, Zero};
 use frame_support::traits::fungibles;
 use frame_support::PalletId;
 pub use pallet::*;
 use sp_runtime::Perbill;
 
-mod liquidity_pool;
-#[cfg(test)]
-mod mock;
+mod types;
 mod util;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -37,14 +35,13 @@ pub type AssetBalanceOf<T> = <<T as Config>::Fungibles as fungibles::Inspect<
 
 #[frame_support::pallet]
 pub mod pallet {
-	use crate::liquidity_pool::AssetPair;
+	use crate::types::AssetPair;
 	use crate::*;
-	use frame_support::traits::tokens::Preservation;
 	use frame_support::{
 		pallet_prelude::*,
 		traits::{
-			fungible::{self, *},
-			fungibles::{self, *},
+			fungible::{self},
+			fungibles::{self},
 		},
 	};
 	use frame_system::pallet_prelude::*;

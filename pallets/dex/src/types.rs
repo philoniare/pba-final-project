@@ -1,9 +1,6 @@
 use super::*;
 use frame_support::pallet_prelude::*;
-use frame_support::traits::tokens::{Fortitude, Precision, Preservation};
 use sp_runtime::helpers_128bit::sqrt;
-use sp_runtime::traits::{CheckedDiv, CheckedMul};
-use sp_runtime::Perbill;
 use std::cmp::min;
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -66,7 +63,7 @@ impl<T: Config> LiquidityPool<T> {
 	) -> DispatchResult {
 		let flow_asset_pair: AssetPair<T> = if asset_out == asset_pair.asset_a {
 			// Rotate the assets
-			(AssetPair { asset_a: asset_pair.asset_b, asset_b: asset_pair.asset_a })
+			AssetPair { asset_a: asset_pair.asset_b, asset_b: asset_pair.asset_a }
 		} else {
 			asset_pair
 		};
