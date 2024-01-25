@@ -1,8 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use crate::types::LiquidityPool;
+use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::{One, Zero};
+use frame_support::traits::fungible;
 use frame_support::traits::fungibles;
+use frame_support::traits::fungibles::*;
 use frame_support::PalletId;
 pub use pallet::*;
 use sp_runtime::Perbill;
@@ -16,9 +19,6 @@ pub(crate) mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 mod traits;
-
-use frame_support::traits::fungible;
-use frame_support::traits::fungibles::*;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type AssetIdOf<T> = <<T as Config>::Fungibles as fungibles::Inspect<
@@ -45,7 +45,7 @@ pub mod pallet {
 		},
 	};
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::AccountIdConversion;
+	use sp_runtime::traits::{AccountIdConversion, Bounded};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -84,6 +84,22 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn asset_counter)]
 	pub type AssetCounter<T: Config> = StorageValue<_, AssetIdOf<T>>;
+
+	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
+	pub struct GenesisConfig<T: Config> {
+		#[serde(skip)]
+		_config: core::marker::PhantomData<T>,
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+		fn build(&self) {
+			use frame_support::traits::fungible::*;
+			let pallet_id: T::AccountId = T::PalletId::get().into_account_truncating();
+			T::NativeBalance::mint_into(&pallet_id, BalanceOf::<T>::max_value());
+		}
+	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
