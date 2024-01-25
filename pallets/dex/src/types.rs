@@ -1,7 +1,7 @@
 use super::*;
 use frame_support::pallet_prelude::*;
 use sp_runtime::helpers_128bit::sqrt;
-use std::cmp::min;
+use sp_std::cmp::min;
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 #[scale_info(skip_type_params(T))]
