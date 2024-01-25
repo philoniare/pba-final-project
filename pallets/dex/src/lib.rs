@@ -222,69 +222,9 @@ pub mod pallet {
 			let pool = LiquidityPools::<T>::get(pool_asset_pair.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
 
-			// Swapping for asset_a (asset_out) in the pool with amount_in of asset_in
-			if asset_out == pool_asset_pair.asset_a {
-				let token_in_reserve =
-					T::Fungibles::balance(pool_asset_pair.asset_b, &pool.manager);
-				let token_out_reserve =
-					T::Fungibles::balance(pool_asset_pair.asset_a, &pool.manager);
-				ensure!(
-					token_in_reserve > amount_in && token_out_reserve > 0,
-					Error::<T>::InsufficientLiquidity
-				);
+			// Swapping for asset_in (asset_out) in the pool with amount_in of asset_in
+			pool.swap(&who, pool_asset_pair.clone(), asset_in, asset_out, amount_in)?;
 
-				let amount_out = pool.calculate_output_for(
-					amount_in,
-					token_in_reserve - amount_in,
-					token_out_reserve,
-				)?;
-
-				T::Fungibles::transfer(
-					pool_asset_pair.asset_b,
-					&who,
-					&pool.manager,
-					amount_in,
-					Preservation::Expendable,
-				)?;
-				T::Fungibles::transfer(
-					pool_asset_pair.asset_a,
-					&pool.manager,
-					&who,
-					amount_out,
-					Preservation::Expendable,
-				)?;
-			} else if asset_out == pool_asset_pair.asset_b {
-				let token_in_reserve =
-					T::Fungibles::balance(pool_asset_pair.asset_a, &pool.manager);
-				let token_out_reserve =
-					T::Fungibles::balance(pool_asset_pair.asset_b, &pool.manager);
-				ensure!(
-					token_in_reserve > amount_in && token_out_reserve > 0,
-					DispatchError::from(Error::<T>::InsufficientBalance)
-				);
-				let amount_out = pool.calculate_output_for(
-					amount_in,
-					token_in_reserve - amount_in,
-					token_out_reserve,
-				)?;
-
-				T::Fungibles::transfer(
-					pool_asset_pair.asset_a,
-					&who,
-					&pool.manager,
-					amount_in,
-					Preservation::Expendable,
-				)?;
-				T::Fungibles::transfer(
-					pool_asset_pair.asset_b,
-					&pool.manager,
-					&who,
-					amount_out,
-					Preservation::Expendable,
-				)?;
-			}
-
-			// Swapping for asset_b (asset_out) in the pool with amount_in of asset_in
 			Self::deposit_event(Event::Swapped(
 				pool_asset_pair.asset_a,
 				pool_asset_pair.asset_b,
@@ -301,8 +241,8 @@ pub mod pallet {
 			let pool_key = AssetPair::new(token_a, token_b);
 			let pool = <LiquidityPools<T>>::get(pool_key.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
-			let token_a_reserve = T::Fungibles::balance(pool_key.asset_a, &pool.manager);
-			let token_b_reserve = T::Fungibles::balance(pool_key.asset_b, &pool.manager);
+
+			let (token_a_reserve, token_b_reserve) = pool.get_reserve(&pool_key)?;
 			Self::calculate_perbill_ratio(token_a_reserve, token_b_reserve)
 				.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))
 		}
@@ -323,8 +263,8 @@ pub mod pallet {
 			let pool = <LiquidityPools<T>>::get(pool_key.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
 
-			let reserve_in = T::Fungibles::balance(asset_in, &pool.manager);
-			let reserve_out = T::Fungibles::balance(asset_out, &pool.manager);
+			let (reserve_in, reserve_out) =
+				pool.get_reserve(&AssetPair { asset_a: asset_in, asset_b: asset_out })?;
 			pool.calculate_output_for(amount_in, reserve_in, reserve_out)
 		}
 	}

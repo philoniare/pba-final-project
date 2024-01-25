@@ -1,5 +1,5 @@
 use crate::*;
-use frame_support::traits::tokens::Preservation;
+use frame_support::traits::tokens::{Fortitude, Precision, Preservation};
 use sp_runtime::{DispatchError, DispatchResult, Perbill};
 
 impl<T: Config> Pallet<T> {
@@ -35,6 +35,14 @@ impl<T: Config> LiquidityPool<T> {
 		amount: AssetBalanceOf<T>,
 	) -> Result<u128, DispatchError> {
 		T::Fungibles::transfer(asset, &self.manager, to, amount, Preservation::Expendable)
+	}
+
+	pub(super) fn burn_lp(
+		&self,
+		who: &AccountIdOf<T>,
+		amount: AssetBalanceOf<T>,
+	) -> Result<u128, DispatchError> {
+		T::Fungibles::burn_from(self.id, who, amount, Precision::Exact, Fortitude::Polite)
 	}
 
 	fn checked_operation<F, R>(x: R, y: R, func: F) -> Result<R, DispatchError>
