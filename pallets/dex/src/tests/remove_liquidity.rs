@@ -37,19 +37,19 @@ fn burn_works() {
 			// Burning of LP tokens successful
 			assert_eq!(Fungibles::balance(pool.id, ALICE), 0);
 			assert_eq!(Fungibles::total_supply(pool.id), MIN_LIQUIDITY);
-			let asset_a_balance = Assets::balance(asset_a, ALICE);
-			let asset_b_balance = Assets::balance(asset_b, ALICE);
+			let asset_a_balance = Fungibles::balance(asset_a, ALICE);
+			let asset_b_balance = Fungibles::balance(asset_b, ALICE);
 
 			// Pallet manager balances have been updated
-			assert_eq!(Assets::balance(asset_a, pool.manager), MIN_LIQUIDITY);
-			assert_eq!(Assets::balance(asset_b, pool.manager), MIN_LIQUIDITY);
+			assert_eq!(Fungibles::balance(asset_a, pool.manager), MIN_LIQUIDITY);
+			assert_eq!(Fungibles::balance(asset_b, pool.manager), MIN_LIQUIDITY);
 
 			let token_a_issuance = Fungibles::total_supply(asset_a);
 			let token_b_issuance = Fungibles::total_supply(asset_b);
 
 			// User balances have been updated
-			assert_eq!(Assets::balance(asset_a, ALICE), token_a_issuance - MIN_LIQUIDITY);
-			assert_eq!(Assets::balance(asset_b, ALICE), token_b_issuance - MIN_LIQUIDITY);
+			assert_eq!(Fungibles::balance(asset_a, ALICE), token_a_issuance - MIN_LIQUIDITY);
+			assert_eq!(Fungibles::balance(asset_b, ALICE), token_b_issuance - MIN_LIQUIDITY);
 
 			// Ensure correct events are triggered
 			frame_system::Pallet::<Test>::assert_has_event(RuntimeEvent::Dex(

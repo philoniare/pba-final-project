@@ -125,8 +125,10 @@ pub mod pallet {
 		InsufficientLiquidity,
 		/// Insufficient Input Amount for a swap, please provide enough input amount
 		InsufficientInputAmount,
+		/// Attempted to burn a LP token with insufficient LP balance
+		InsufficientBurnBalance,
 		/// Provided assets are the same
-		InvalidAssets,
+		IdenticalAssets,
 	}
 
 	#[pallet::call]
@@ -141,6 +143,11 @@ pub mod pallet {
 			amount_b: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			// Assets should be different to create a pool
+			ensure!(asset_a != asset_b, Error::<T>::IdenticalAssets);
+			// Both amounts can be the same to create a liquidity pool
+			ensure!(amount_a > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientInputAmount);
+			ensure!(amount_b > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientInputAmount);
 
 			let pool_asset_pair = AssetPair::new(asset_a.clone(), asset_b.clone());
 
@@ -162,7 +169,6 @@ pub mod pallet {
 
 					// Create the liquidity pool if it doesn't exist
 					let new_pool = LiquidityPool { id: asset_counter, manager: pallet_id };
-
 					<LiquidityPools<T>>::set(pool_asset_pair.clone(), Some(new_pool.clone()));
 
 					Self::deposit_event(crate::pallet::Event::LiquidityPoolCreated(
@@ -177,7 +183,7 @@ pub mod pallet {
 				},
 			};
 
-			// Add initial liquidity
+			// Add liquidity
 			pool.add_liquidity(pool_asset_pair, amount_a, amount_b, &who)?;
 
 			Self::deposit_event(crate::pallet::Event::LiquidityAdded(
@@ -196,10 +202,12 @@ pub mod pallet {
 			token_amount: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-
+			ensure!(asset_a != asset_b, Error::<T>::IdenticalAssets);
+			// Make sure the pool exists
 			let pool_asset_pair = AssetPair::new(asset_a.clone(), asset_b.clone());
 			let pool = LiquidityPools::<T>::get(pool_asset_pair.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
+
 			pool.remove_liquidity(pool_asset_pair, token_amount, &who)?;
 
 			Self::deposit_event(Event::LiquidityRemoved(asset_a, asset_b, token_amount));
@@ -215,6 +223,7 @@ pub mod pallet {
 			amount_in: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			ensure!(asset_a != asset_b, Error::<T>::IdenticalAssets);
 			let pool_asset_pair = AssetPair::new(asset_in.clone(), asset_out.clone());
 			let pool = LiquidityPools::<T>::get(pool_asset_pair.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
@@ -254,7 +263,7 @@ pub mod pallet {
 			amount_in: Self::Balance,
 			asset_out: Self::AssetId,
 		) -> Result<Self::Balance, DispatchError> {
-			ensure!(asset_in != asset_out, Error::<T>::InvalidAssets);
+			ensure!(asset_in != asset_out, Error::<T>::IdenticalAssets);
 
 			let pool_key = AssetPair::new(asset_in, asset_out);
 			let pool = <LiquidityPools<T>>::get(pool_key.clone())

@@ -31,12 +31,12 @@ fn mint_works() {
 			assert_eq!(Fungibles::balance(pool.id, ALICE), expected_liquidity - MIN_LIQUIDITY);
 
 			// User balances have been updated
-			assert_eq!(Assets::balance(asset_a, ALICE), 0);
-			assert_eq!(Assets::balance(asset_b, ALICE), 0);
+			assert_eq!(Fungibles::balance(asset_a, ALICE), 0);
+			assert_eq!(Fungibles::balance(asset_b, ALICE), 0);
 
 			// Pallet manager balances have been updated
-			assert_eq!(Assets::balance(asset_a, pool.manager), amount_a);
-			assert_eq!(Assets::balance(asset_b, pool.manager), amount_b);
+			assert_eq!(Fungibles::balance(asset_a, pool.manager), amount_a);
+			assert_eq!(Fungibles::balance(asset_b, pool.manager), amount_b);
 
 			// Ensure correct events are triggered
 			frame_system::Pallet::<Test>::assert_has_event(RuntimeEvent::Dex(

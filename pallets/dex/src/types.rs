@@ -68,6 +68,7 @@ impl<T: Config> LiquidityPool<T> {
 			asset_pair
 		};
 		let (token_in_reserve, token_out_reserve) = self.get_reserve(&flow_asset_pair)?;
+		ensure!(amount_in > 0, Error::<T>::InsufficientInputAmount);
 		ensure!(
 			token_in_reserve > amount_in && token_out_reserve > 0,
 			Error::<T>::InsufficientLiquidity
@@ -149,9 +150,6 @@ impl<T: Config> LiquidityPool<T> {
 		amount_b: AssetBalanceOf<T>,
 		who: &AccountIdOf<T>,
 	) -> DispatchResult {
-		ensure!(amount_a > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientInputAmount);
-		ensure!(amount_b > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientInputAmount);
-
 		let total_issuance = T::Fungibles::total_issuance(self.id);
 		let (token_a_reserve, token_b_reserve) = self.get_reserve(&asset_pair)?;
 
@@ -162,7 +160,7 @@ impl<T: Config> LiquidityPool<T> {
 			token_a_reserve,
 			token_b_reserve,
 		)?;
-		ensure!(liquidity > AssetBalanceOf::<T>::zero(), Error::<T>::UnsufficientAmountB);
+		ensure!(liquidity > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientLiquidity);
 
 		T::Fungibles::mint_into(self.id, who, liquidity)?;
 		self.transfer_in(asset_pair.asset_a, &who, amount_a)?;

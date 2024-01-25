@@ -1,4 +1,5 @@
 use crate::*;
+use frame_support::ensure;
 use frame_support::traits::tokens::{Fortitude, Precision, Preservation};
 use sp_runtime::{DispatchError, Perbill};
 
@@ -42,6 +43,8 @@ impl<T: Config> LiquidityPool<T> {
 		who: &AccountIdOf<T>,
 		amount: AssetBalanceOf<T>,
 	) -> Result<u128, DispatchError> {
+		let lp_balance = T::Fungibles::balance(self.id, &who);
+		ensure!(lp_balance >= amount, Error::<T>::InsufficientBurnBalance);
 		T::Fungibles::burn_from(self.id, who, amount, Precision::Exact, Fortitude::Polite)
 	}
 
@@ -50,7 +53,7 @@ impl<T: Config> LiquidityPool<T> {
 		F: Fn(R, R) -> Option<R>,
 		R: sp_runtime::traits::AtLeast32BitUnsigned,
 	{
-		func(x, y).ok_or_else(|| Error::<T>::Arithmetic.into())
+		func(x, y).ok_or(Error::<T>::Arithmetic.into())
 	}
 
 	pub(super) fn safe_mul(
