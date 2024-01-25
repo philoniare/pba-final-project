@@ -1,4 +1,3 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-24ddc0f5d75046c5622901739e7c5dd533143b0c8e959d652212380cedb1ea36.svg)](https://classroom.github.com/a/6Wn1Dsn4)
 # 📣 MeMeSwap: Uniswap V2 for Meme Coins
 
 ![Memeswap logo](https://i.ibb.co/CPck0ZR/DALL-E-2024-01-25-16-12-59-Design-a-logo-for-Meme-Swap-a-Uniswap-style-decentralized-token-exchange.png)
@@ -19,7 +18,7 @@ Welcome to MeMeSwap! Built as a version of Uniswap V2 specifically for Meme Coin
 
 
 ## 📚 Documentation
-- The html documentation can be found under `/pallets/dex/`
+- The html documentation can be found under `/docs/index.html`
 
 ## 💗 Support
 Give a ⭐️ if this project helped you! Your support helps us continuously improve and maintain this project.
@@ -37,6 +36,11 @@ A fresh FRAME-based [Substrate](https://www.substrate.io/) node, ready for hacki
 ### Setup
 
 Please first check the latest information on getting starting with Substrate dependencies required to build this project [here](https://docs.substrate.io/main-docs/install/).
+
+### See docs
+```sh
+cargo +nightly doc --open --package pallet-dex --no-deps
+```
 
 ### Development Testing
 
