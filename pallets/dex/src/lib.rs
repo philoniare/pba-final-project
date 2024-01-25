@@ -169,10 +169,11 @@ pub mod pallet {
 
 					// Create the liquidity pool if it doesn't exist
 					let new_pool = LiquidityPool { id: asset_counter, manager: pallet_id };
-					<LiquidityPools<T>>::set(pool_asset_pair.clone(), Some(new_pool.clone()));
+					<LiquidityPools<T>>::set(&pool_asset_pair, Some(new_pool.clone()));
 
 					Self::deposit_event(crate::pallet::Event::LiquidityPoolCreated(
-						asset_a, asset_b,
+						pool_asset_pair.asset_a,
+						pool_asset_pair.asset_b,
 					));
 
 					// Increment counter for keeping track of asset_id
@@ -184,10 +185,13 @@ pub mod pallet {
 			};
 
 			// Add liquidity
-			pool.add_liquidity(pool_asset_pair, amount_a, amount_b, &who)?;
+			pool.add_liquidity(&pool_asset_pair, amount_a, amount_b, &who)?;
 
 			Self::deposit_event(crate::pallet::Event::LiquidityAdded(
-				asset_a, asset_b, amount_a, amount_b,
+				pool_asset_pair.asset_a,
+				pool_asset_pair.asset_b,
+				amount_a,
+				amount_b,
 			));
 
 			Ok(())
@@ -223,7 +227,7 @@ pub mod pallet {
 			amount_in: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			ensure!(asset_a != asset_b, Error::<T>::IdenticalAssets);
+			ensure!(asset_in != asset_out, Error::<T>::IdenticalAssets);
 			let pool_asset_pair = AssetPair::new(asset_in.clone(), asset_out.clone());
 			let pool = LiquidityPools::<T>::get(pool_asset_pair.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;

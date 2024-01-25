@@ -123,7 +123,9 @@ impl<T: Config> LiquidityPool<T> {
 
 		if total_issuance == zero_balance {
 			let product = Self::safe_mul(amount_a, amount_b)?;
-			liquidity = Self::safe_sub(sqrt(product), u128::from(T::MinimumLiquidity::get()))?;
+			let min_liq = u128::from(T::MinimumLiquidity::get());
+			ensure!(sqrt(product) >= min_liq, Error::<T>::InsufficientLiquidity);
+			liquidity = Self::safe_sub(sqrt(product), min_liq)?;
 			T::Fungibles::mint_into(
 				self.id,
 				&self.manager,
@@ -145,7 +147,7 @@ impl<T: Config> LiquidityPool<T> {
 
 	pub fn add_liquidity(
 		&self,
-		asset_pair: AssetPair<T>,
+		asset_pair: &AssetPair<T>,
 		amount_a: AssetBalanceOf<T>,
 		amount_b: AssetBalanceOf<T>,
 		who: &AccountIdOf<T>,
