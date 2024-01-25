@@ -249,10 +249,16 @@ pub mod pallet {
 		type AssetId = AssetIdOf<T>;
 		fn ratio(token_a: Self::AssetId, token_b: Self::AssetId) -> Result<Perbill, DispatchError> {
 			let pool_key = AssetPair::new(token_a, token_b);
+			ensure!(token_a != token_b, Error::<T>::IdenticalAssets);
 			let pool = <LiquidityPools<T>>::get(pool_key.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
 
-			let (token_a_reserve, token_b_reserve) = pool.get_reserve(&pool_key)?;
+			let ratio_key = if token_a == pool_key.asset_a {
+				pool_key
+			} else {
+				AssetPair { asset_a: token_a, asset_b: token_b }
+			};
+			let (token_a_reserve, token_b_reserve) = pool.get_reserve(&ratio_key)?;
 			Self::calculate_perbill_ratio(token_a_reserve, token_b_reserve)
 				.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))
 		}
