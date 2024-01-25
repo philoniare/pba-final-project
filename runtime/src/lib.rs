@@ -320,8 +320,9 @@ impl pallet_dex::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type NativeBalance = Balances;
 	type Fungibles = Assets;
-	type PalletId = ();
+	type PalletId = MemeSwapPallet;
 	type TokenDecimals = TokenDecimals;
+	type MinimumLiquidity = MinimumLiquidity;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
