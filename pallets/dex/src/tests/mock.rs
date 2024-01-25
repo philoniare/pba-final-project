@@ -12,7 +12,6 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 use std::cell::RefCell;
-use std::collections::HashMap;
 
 type Block = frame_system::mocking::MockBlock<Test>;
 pub type Balance = u128;
@@ -145,9 +144,8 @@ impl ExtBuilder {
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-		System::set_block_number(1);
 		let mut assets = vec![];
-		for (asset_id, account_id, balance) in self.endowed_balances.into_iter() {
+		for (asset_id, account_id, balance) in self.endowed_balances.clone().into_iter() {
 			assets.push((asset_id, ADMIN, true, MINT_BALANCE));
 		}
 

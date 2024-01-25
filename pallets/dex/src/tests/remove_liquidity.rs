@@ -1,53 +1,59 @@
 use crate::tests::mock::*;
 use crate::types::{AssetPair, LiquidityPool};
+use crate::{Event, LiquidityPools};
 use frame_support::{assert_noop, assert_ok};
 
 #[test]
 fn burn_works() {
-	new_test_ext().execute_with(|| {
-		let root = RuntimeOrigin::root();
-		let initial_amount_a = Dex::expand_to_decimals(3u128);
-		let initial_amount_b = Dex::expand_to_decimals(3u128);
-		let expected_liquidity = Dex::expand_to_decimals(3u128).sub(MIN_LIQUIDITY);
-		System::set_block_number(1);
-		assert_ok!(create_and_mint(root.clone(), ASSET_A, ADMIN, ALICE, initial_amount_a));
-		assert_ok!(create_and_mint(root.clone(), ASSET_B, ADMIN, ALICE, initial_amount_b));
+	let asset_a: AssetId = 1001;
+	let asset_b: AssetId = 1002;
+	let amount_a: u128 = Dex::expand_to_decimals(3u128);
+	let amount_b: u128 = Dex::expand_to_decimals(3u128);
 
-		assert_ok!(Dex::mint(
-			RuntimeOrigin::signed(ALICE),
-			ASSET_A,
-			ASSET_B,
-			initial_amount_a,
-			initial_amount_b
-		));
+	ExtBuilder::default()
+		.with_endowed_balances(vec![(asset_a, ALICE, amount_a), (asset_b, ALICE, amount_b)])
+		.build()
+		.execute_with(|| {
+			let expected_liquidity = Dex::expand_to_decimals(3u128) - MIN_LIQUIDITY;
 
-		let pool_key = AssetPair::new(ASSET_A, ASSET_B);
-		let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
+			assert_ok!(Dex::mint(
+				RuntimeOrigin::signed(ALICE),
+				asset_a,
+				asset_b,
+				amount_a,
+				amount_b,
+			));
 
-		assert_ok!(Dex::burn(RuntimeOrigin::signed(ALICE), ASSET_A, ASSET_B, expected_liquidity));
+			let pool_key = AssetPair::new(asset_a, asset_b);
+			let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
 
-		// Burning of LP tokens successful
-		assert_eq!(Fungibles::balance(pool.id, ALICE), 0);
-		assert_eq!(Fungibles::total_supply(pool.id), MIN_LIQUIDITY);
-		let asset_a_balance = Assets::balance(ASSET_A, ALICE);
-		let asset_b_balance = Assets::balance(ASSET_B, ALICE);
+			assert_ok!(Dex::burn(
+				RuntimeOrigin::signed(ALICE),
+				asset_a,
+				asset_b,
+				expected_liquidity
+			));
 
-		// Pallet manager balances have been updated
-		assert_eq!(Assets::balance(ASSET_A, pool.manager), MIN_LIQUIDITY);
-		assert_eq!(Assets::balance(ASSET_B, pool.manager), MIN_LIQUIDITY);
+			// Burning of LP tokens successful
+			assert_eq!(Fungibles::balance(pool.id, ALICE), 0);
+			assert_eq!(Fungibles::total_supply(pool.id), MIN_LIQUIDITY);
+			let asset_a_balance = Assets::balance(asset_a, ALICE);
+			let asset_b_balance = Assets::balance(asset_b, ALICE);
 
-		let token_a_issuance = Fungibles::total_supply(ASSET_A);
-		let token_b_issuance = Fungibles::total_supply(ASSET_B);
+			// Pallet manager balances have been updated
+			assert_eq!(Assets::balance(asset_a, pool.manager), MIN_LIQUIDITY);
+			assert_eq!(Assets::balance(asset_b, pool.manager), MIN_LIQUIDITY);
 
-		// User balances have been updated
-		assert_eq!(Assets::balance(ASSET_A, ALICE), token_a_issuance.sub(MIN_LIQUIDITY));
-		assert_eq!(Assets::balance(ASSET_B, ALICE), token_b_issuance.sub(MIN_LIQUIDITY));
+			let token_a_issuance = Fungibles::total_supply(asset_a);
+			let token_b_issuance = Fungibles::total_supply(asset_b);
 
-		// Ensure correct events are triggered
-		frame_system::Pallet::<Test>::assert_has_event(RuntimeEvent::Dex(Event::LiquidityRemoved(
-			ASSET_A,
-			ASSET_B,
-			expected_liquidity,
-		)));
-	});
+			// User balances have been updated
+			assert_eq!(Assets::balance(asset_a, ALICE), token_a_issuance - MIN_LIQUIDITY);
+			assert_eq!(Assets::balance(asset_b, ALICE), token_b_issuance - MIN_LIQUIDITY);
+
+			// Ensure correct events are triggered
+			frame_system::Pallet::<Test>::assert_has_event(RuntimeEvent::Dex(
+				Event::LiquidityRemoved(asset_a, asset_b, expected_liquidity),
+			));
+		});
 }

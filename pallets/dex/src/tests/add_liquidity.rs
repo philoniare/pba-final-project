@@ -7,8 +7,8 @@ use frame_support::{assert_noop, assert_ok};
 fn mint_works() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
-	let amount_a: u128 = 1u128;
-	let amount_b: u128 = 4u128;
+	let amount_a: u128 = Dex::expand_to_decimals(1u128);
+	let amount_b: u128 = Dex::expand_to_decimals(4u128);
 
 	ExtBuilder::default()
 		.with_endowed_balances(vec![(asset_a, ALICE, amount_a), (asset_b, ALICE, amount_b)])
