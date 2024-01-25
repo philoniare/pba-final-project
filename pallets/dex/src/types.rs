@@ -91,7 +91,7 @@ impl<T: Config> LiquidityPool<T> {
 		if reserve_in.is_zero() || reserve_out.is_zero() {
 			return Ok(AssetBalanceOf::<T>::zero());
 		}
-
+		// Deduct fixed 0.3% fee from the swap, which is used to reward liquidity providers
 		let amount_without_fee = Self::safe_mul(amount_in, 997u128)?;
 		let ratio = Self::safe_mul(amount_without_fee, reserve_out)?;
 		let mut reserve_total = Self::safe_mul(reserve_in, 1000u128)?;
