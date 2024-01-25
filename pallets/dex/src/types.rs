@@ -62,7 +62,7 @@ impl<T: Config> LiquidityPool<T> {
 		amount_in: AssetBalanceOf<T>,
 	) -> DispatchResult {
 		let flow_asset_pair: AssetPair<T> = if asset_out == asset_pair.asset_a {
-			// Rotate the assets
+			// Rotate the assets in case they want to reverse swap
 			AssetPair { asset_a: asset_pair.asset_b, asset_b: asset_pair.asset_a }
 		} else {
 			asset_pair

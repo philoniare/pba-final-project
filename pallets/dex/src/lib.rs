@@ -94,29 +94,20 @@ pub mod pallet {
 		LiquidityAdded(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>, AssetBalanceOf<T>),
 		/// Event for removing a liquidity from an existing pool
 		LiquidityRemoved(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>),
-		/// Event for swapping exact in for min out
+		/// Event for swapping first asset for second asset for the provided input amount
 		Swapped(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>),
 	}
 
-	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
 		/// There is not asset with the provided AssetId
 		UnknownAssetId,
-		/// Arithmetic overflow occurred during calculation
-		StorageOverflow,
 		/// Liquidity Pool does not exist
 		LiquidityPoolDoesNotExist,
 		/// Overflow for asset id counter
 		AssetLimitReached,
 		/// Arithmetic Error when multiplying and dividing
 		Arithmetic,
-		/// User provides insufficient amount_b that fails to maintain a constant token_a_reserve * token_b_reserve
-		UnsufficientAmountB,
-		/// Missing Parameter
-		MissingParam,
-		/// Insufficient Output Amount for a swap, please provide the output amount
-		InsufficientOutputAmount,
 		/// Liquidity Pool does not have sufficient liquidity for the specified swap
 		InsufficientLiquidity,
 		/// Insufficient Input Amount for a swap, please provide enough input amount
@@ -129,6 +120,37 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// The `mint` function allows a user to add liquidity to a liquidity pool.
+		/// Given two assets and their amounts, it either creates a new liquidity pool if
+		/// it does not already exist for these two assets or adds the provided liquidity
+		/// to an existing pool. The user will receive LP tokens in return.
+		///
+		/// # Arguments
+		///
+		/// * `origin` - The origin caller of this function. This should be signed by the user adding liquidity.
+		/// * `asset_a` - The identifier for the first type of asset that the user wants to provide.
+		/// * `asset_b` - The identifier for the second type of asset that the user wants to provide.
+		/// * `amount_a` - The amount of `asset_a` that the user is providing.
+		/// * `amount_b` - The amount of `asset_b` that the user is providing.
+		///
+		/// # Errors
+		///
+		/// This function will return an error in the following scenarios:
+		///
+		/// * If the origin is not signed (i.e., the function was not called by a user).
+		/// * If the provided assets do not exist.
+		/// * If `asset_a` and `asset_b` are the same.
+		/// * If `amount_a` or `amount_b` is 0 or less.
+		/// * If creating a new liquidity pool would exceed the maximum number of allowed assets (`AssetLimitReached`).
+		/// * If adding liquidity to the pool fails for any reason due to arithmetic overflows or underflows
+		///
+		/// # Events
+		///
+		/// If the function succeeds, it triggers two events:
+		///
+		/// * `LiquidityPoolCreated(asset_a, asset_b)` if a new liquidity pool was created.
+		/// * `LiquidityAdded(asset_a, asset_b, amount_a, amount_b)` after the liquidity has been successfully added.
+		///
 		#[pallet::call_index(0)]
 		#[pallet::weight(Weight::default())]
 		pub fn mint(
@@ -186,7 +208,7 @@ pub mod pallet {
 			// Add liquidity
 			pool.add_liquidity(&pool_asset_pair, amount_a, amount_b, &who)?;
 
-			Self::deposit_event(crate::pallet::Event::LiquidityAdded(
+			Self::deposit_event(Event::LiquidityAdded(
 				pool_asset_pair.asset_a,
 				pool_asset_pair.asset_b,
 				amount_a,
@@ -196,6 +218,32 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// The `burn` function allows a user to remove liquidity from a specified
+		/// liquidity pool. This is done by burning LP tokens and receiving the respective
+		/// underlying assets in return.
+		///
+		/// # Arguments
+		///
+		/// * `origin` - The origin caller of this function. This should be signed by the user removing liquidity.
+		/// * `asset_a` - The identifier for the first type of asset in the liquidity pool.
+		/// * `asset_b` - The identifier for the second type of asset in the liquidity pool.
+		/// * `token_amount` - The amount of liquidity the user wants to remove. This is denominated in LP tokens.
+		///
+		/// # Errors
+		///
+		/// This function will return an error in the following scenarios:
+		///
+		/// * If the origin is not signed (i.e., the function was not called by a user).
+		/// * If the provided assets do not exist.
+		/// * If `token_amount` is 0 or if it's more than the LP Token balance of the caller
+		/// * If `asset_a` and `asset_b` are the same.
+		/// * If the liquidity pool for the given asset pair does not exist.
+		/// * If removing the liquidity from the pool fails for any reason due to arithmetic overflow or underflow
+		///
+		/// # Events
+		///
+		/// If the function succeeds, it triggers a `LiquidityRemoved(asset_a, asset_b, token_amount)` event.
+		///
 		#[pallet::call_index(1)]
 		#[pallet::weight(Weight::default())]
 		pub fn burn(
@@ -218,6 +266,31 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// The `swap` function allows a user to exchange one type of token for another within a specific
+		/// liquidity pool.
+		///
+		/// # Arguments
+		///
+		/// * `origin` - The origin caller of this function. This should be signed by the user performing the swap.
+		/// * `asset_in` - The identifier for the type of asset that the user wants to swap from.
+		/// * `asset_out` - The identifier for the type of asset that the user wants to swap to.
+		/// * `amount_in` - The amount of `asset_in` that the user wants to swap.
+		///
+		/// # Errors
+		///
+		/// This function will return an error in the following scenarios:
+		///
+		/// * If the origin is not signed (i.e., the function was not called by a user).
+		/// * If the provided assets do not exist.
+		/// * If `amount_in` is 0 or less.
+		/// * If `asset_in` and `asset_out` are the same.
+		/// * If the liquidity pool for the given pair of assets does not exist.
+		/// * If the swap operation fails for any reason due to arithmetic error
+		///
+		/// # Events
+		///
+		/// If the function succeeds, it triggers a `Swapped(asset_a, asset_b, amount_in)` event.
+		///
 		#[pallet::call_index(2)]
 		#[pallet::weight(Weight::default())]
 		pub fn swap(
