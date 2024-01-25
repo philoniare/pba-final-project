@@ -49,6 +49,51 @@ fn mint_works() {
 }
 
 #[test]
+fn mint_works_increments_counter_on_multiple_pools() {
+	let asset_a: AssetId = 1001;
+	let asset_b: AssetId = 1002;
+	let asset_c: AssetId = 1003;
+	let total: u128 = Dex::expand_to_decimals(10u128);
+	let amount_a: u128 = Dex::expand_to_decimals(1u128);
+	let amount_b: u128 = Dex::expand_to_decimals(4u128);
+
+	ExtBuilder::default()
+		.with_endowed_balances(vec![
+			(asset_a, ALICE, total),
+			(asset_b, ALICE, total),
+			(asset_c, ALICE, total),
+		])
+		.build()
+		.execute_with(|| {
+			let expected_liquidity = Dex::expand_to_decimals(2u128);
+			// Create the first pool
+			assert_ok!(Dex::mint(
+				RuntimeOrigin::signed(ALICE.into()),
+				asset_a,
+				asset_b,
+				amount_a,
+				amount_b
+			));
+
+			assert_ok!(Dex::mint(
+				RuntimeOrigin::signed(ALICE.into()),
+				asset_a,
+				asset_c,
+				amount_a,
+				amount_b
+			));
+
+			let pool_key = AssetPair::new(asset_a, asset_c);
+			let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
+
+			// Minting of LP Tokens occurred
+			assert_eq!(Fungibles::total_supply(pool.id), expected_liquidity);
+			assert_eq!(Fungibles::balance(pool.id, ALICE), expected_liquidity - MIN_LIQUIDITY);
+			assert_eq!(pool.id, 1);
+		});
+}
+
+#[test]
 fn mint_works_with_existing_pool() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
@@ -234,6 +279,56 @@ fn mint_fails_with_insufficient_liquidity() {
 					amount_b
 				),
 				Error::<Test>::InsufficientLiquidity
+			);
+		});
+}
+
+#[test]
+fn mint_fails_with_unknown_asset_id_a() {
+	let asset_a: AssetId = 1001;
+	let asset_b: AssetId = 1002;
+	let amount_a: u128 = 1;
+	let amount_b: u128 = 4;
+
+	ExtBuilder::default()
+		.with_endowed_balances(vec![(asset_a, ALICE, amount_a)])
+		.build()
+		.execute_with(|| {
+			let expected_liquidity = Dex::expand_to_decimals(2u128);
+			assert_noop!(
+				Dex::mint(
+					RuntimeOrigin::signed(ALICE.into()),
+					asset_a,
+					asset_b,
+					amount_a,
+					amount_b
+				),
+				Error::<Test>::UnknownAssetId
+			);
+		});
+}
+
+#[test]
+fn mint_fails_with_unknown_asset_id_b() {
+	let asset_a: AssetId = 1001;
+	let asset_b: AssetId = 1002;
+	let amount_a: u128 = 1;
+	let amount_b: u128 = 4;
+
+	ExtBuilder::default()
+		.with_endowed_balances(vec![(asset_b, ALICE, amount_b)])
+		.build()
+		.execute_with(|| {
+			let expected_liquidity = Dex::expand_to_decimals(2u128);
+			assert_noop!(
+				Dex::mint(
+					RuntimeOrigin::signed(ALICE.into()),
+					asset_a,
+					asset_b,
+					amount_a,
+					amount_b
+				),
+				Error::<Test>::UnknownAssetId
 			);
 		});
 }

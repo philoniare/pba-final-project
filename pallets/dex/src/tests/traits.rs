@@ -88,6 +88,36 @@ fn fetching_token_ratio_fails_on_nonexistent_pool() {
 }
 
 #[test]
+fn fetching_token_ratio_fails_on_unknown_asset_a() {
+	let asset_a: AssetId = 1001;
+	let asset_b: AssetId = 1002;
+	let amount_a: u128 = Dex::expand_to_decimals(10u128);
+	let amount_b: u128 = Dex::expand_to_decimals(50u128);
+
+	ExtBuilder::default()
+		.with_endowed_balances(vec![(asset_b, ALICE, amount_b)])
+		.build()
+		.execute_with(|| {
+			assert_noop!(Dex::ratio(asset_a, asset_b), Error::<Test>::UnknownAssetId);
+		});
+}
+
+#[test]
+fn fetching_token_ratio_fails_on_unknown_asset_b() {
+	let asset_a: AssetId = 1001;
+	let asset_b: AssetId = 1002;
+	let amount_a: u128 = Dex::expand_to_decimals(10u128);
+	let amount_b: u128 = Dex::expand_to_decimals(50u128);
+
+	ExtBuilder::default()
+		.with_endowed_balances(vec![(asset_a, ALICE, amount_a)])
+		.build()
+		.execute_with(|| {
+			assert_noop!(Dex::ratio(asset_a, asset_b), Error::<Test>::UnknownAssetId);
+		});
+}
+
+#[test]
 fn fetching_price_for_works_from_a_b() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
@@ -170,5 +200,35 @@ fn fetching_price_fails_on_nonexistent_pool() {
 				Dex::get_price_for(asset_a, 1, asset_b),
 				Error::<Test>::LiquidityPoolDoesNotExist
 			);
+		});
+}
+
+#[test]
+fn fetching_price_fails_on_unknown_asset_a() {
+	let asset_a: AssetId = 1001;
+	let asset_b: AssetId = 1002;
+	let amount_a: u128 = Dex::expand_to_decimals(10u128);
+	let amount_b: u128 = Dex::expand_to_decimals(50u128);
+
+	ExtBuilder::default()
+		.with_endowed_balances(vec![(asset_b, ALICE, amount_b)])
+		.build()
+		.execute_with(|| {
+			assert_noop!(Dex::get_price_for(asset_a, 1, asset_b), Error::<Test>::UnknownAssetId);
+		});
+}
+
+#[test]
+fn fetching_price_fails_on_unknown_asset_b() {
+	let asset_a: AssetId = 1001;
+	let asset_b: AssetId = 1002;
+	let amount_a: u128 = Dex::expand_to_decimals(10u128);
+	let amount_b: u128 = Dex::expand_to_decimals(50u128);
+
+	ExtBuilder::default()
+		.with_endowed_balances(vec![(asset_a, ALICE, amount_a)])
+		.build()
+		.execute_with(|| {
+			assert_noop!(Dex::get_price_for(asset_a, 1, asset_b), Error::<Test>::UnknownAssetId);
 		});
 }

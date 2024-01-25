@@ -28,6 +28,15 @@ impl<T: Config> Pallet<T> {
 
 		Some(Perbill::from_parts(ratio.min(u32::MAX as u128) as u32))
 	}
+
+	pub(super) fn ensure_assets_exist(
+		asset_a: AssetIdOf<T>,
+		asset_b: AssetIdOf<T>,
+	) -> Result<(), DispatchError> {
+		ensure!(T::Fungibles::asset_exists(asset_a), Error::<T>::UnknownAssetId);
+		ensure!(T::Fungibles::asset_exists(asset_b), Error::<T>::UnknownAssetId);
+		Ok(())
+	}
 }
 
 impl<T: Config> LiquidityPool<T> {

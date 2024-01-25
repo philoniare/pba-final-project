@@ -101,11 +101,7 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// User balance insufficient to cover the cost of the operation
-		InsufficientBalance,
-		/// Invalid amount provided for the amount field
-		InvalidAmount,
-		/// Provided AssetId is not registered
+		/// There is not asset with the provided AssetId
 		UnknownAssetId,
 		/// Arithmetic overflow occurred during calculation
 		StorageOverflow,
@@ -143,6 +139,7 @@ pub mod pallet {
 			amount_b: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			Self::ensure_assets_exist(asset_a, asset_b)?;
 			// Assets should be different to create a pool
 			ensure!(asset_a != asset_b, Error::<T>::IdenticalAssets);
 			// Both amounts can be the same to create a liquidity pool
@@ -180,6 +177,8 @@ pub mod pallet {
 					asset_counter =
 						asset_counter.checked_add(1).ok_or(Error::<T>::AssetLimitReached)?;
 
+					AssetCounter::<T>::set(asset_counter);
+
 					new_pool
 				},
 			};
@@ -206,6 +205,7 @@ pub mod pallet {
 			token_amount: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			Self::ensure_assets_exist(asset_a, asset_b)?;
 			ensure!(asset_a != asset_b, Error::<T>::IdenticalAssets);
 			// Make sure the pool exists
 			let pool_asset_pair = AssetPair::new(asset_a.clone(), asset_b.clone());
@@ -227,6 +227,7 @@ pub mod pallet {
 			amount_in: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			Self::ensure_assets_exist(asset_in, asset_out)?;
 			ensure!(asset_in != asset_out, Error::<T>::IdenticalAssets);
 			let pool_asset_pair = AssetPair::new(asset_in.clone(), asset_out.clone());
 			let pool = LiquidityPools::<T>::get(pool_asset_pair.clone())
@@ -249,6 +250,7 @@ pub mod pallet {
 		type AssetId = AssetIdOf<T>;
 		fn ratio(token_a: Self::AssetId, token_b: Self::AssetId) -> Result<Perbill, DispatchError> {
 			let pool_key = AssetPair::new(token_a, token_b);
+			Self::ensure_assets_exist(token_a, token_b)?;
 			ensure!(token_a != token_b, Error::<T>::IdenticalAssets);
 			let pool = <LiquidityPools<T>>::get(pool_key.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
@@ -273,6 +275,7 @@ pub mod pallet {
 			amount_in: Self::Balance,
 			asset_out: Self::AssetId,
 		) -> Result<Self::Balance, DispatchError> {
+			Self::ensure_assets_exist(asset_in, asset_out)?;
 			ensure!(asset_in != asset_out, Error::<T>::IdenticalAssets);
 
 			let pool_key = AssetPair::new(asset_in, asset_out);
