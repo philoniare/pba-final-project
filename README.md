@@ -4,6 +4,12 @@
 
 Welcome to MeMeSwap! Built as a version of Uniswap V2 specifically for Meme Coins, MeMeSwap is an automatic protocol for token swaps and liquidity provision on a decentralized network. You can create liquidity pools, provide liquidity, and swap tokens seamlessly!
 
+## Video demo:
+### Creating a liquidity pool:
+https://www.loom.com/share/03e2c43e33ed4d1298e26107b2a98432
+### Swapping token:
+https://www.loom.com/share/964d1a1dd92746c8b31119ec7dbc47b5
+
 ## 🚀 Features
 - **Swap Tokens**: Safely swap any two Meme tokens without the need for a centralized party only with 0.3% fee.
 - **Add Liquidity**: Provide liquidity to pools and earn on the pro-rata share of trading fees.
