@@ -1,12 +1,13 @@
 use crate::tests::mock::*;
 use crate::types::AssetPair;
-use crate::{AssetIdOf, Error, Event, LiquidityPools};
+use crate::{Error, Event, LiquidityPools};
 use frame_support::{assert_noop, assert_ok};
 
 #[test]
 fn mint_works() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(1u128);
 	let amount_b: u128 = expand_to_decimals(4u128);
 	println!("A: {:?}", amount_a);
@@ -18,6 +19,7 @@ fn mint_works() {
 			let expected_liquidity = expand_to_decimals(2u128);
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -41,7 +43,7 @@ fn mint_works() {
 
 			// Ensure correct events are triggered
 			frame_system::Pallet::<Test>::assert_has_event(RuntimeEvent::Dex(
-				Event::LiquidityPoolCreated(asset_a, asset_b),
+				Event::LiquidityPoolCreated(pool_id, asset_a, asset_b),
 			));
 			frame_system::Pallet::<Test>::assert_has_event(RuntimeEvent::Dex(
 				Event::LiquidityAdded(asset_a, asset_b, amount_a, amount_b),
@@ -54,6 +56,8 @@ fn mint_works_increments_counter_on_multiple_pools() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
 	let asset_c: AssetId = 1003;
+	let pool_id: AssetId = 10000;
+	let pool_id_2: AssetId = 10001;
 	let total: u128 = expand_to_decimals(10u128);
 	let amount_a: u128 = expand_to_decimals(1u128);
 	let amount_b: u128 = expand_to_decimals(4u128);
@@ -70,6 +74,7 @@ fn mint_works_increments_counter_on_multiple_pools() {
 			// Create the first pool
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -78,6 +83,7 @@ fn mint_works_increments_counter_on_multiple_pools() {
 
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
+				pool_id_2,
 				asset_a,
 				asset_c,
 				amount_a,
@@ -90,7 +96,7 @@ fn mint_works_increments_counter_on_multiple_pools() {
 			// Minting of LP Tokens occurred
 			assert_eq!(Fungibles::total_supply(pool.id), expected_liquidity);
 			assert_eq!(Fungibles::balance(pool.id, ALICE), expected_liquidity - MIN_LIQUIDITY);
-			assert_eq!(pool.id, AssetIdOf::<Test>::MAX - 1);
+			assert_eq!(pool.id, pool_id_2);
 		});
 }
 
@@ -98,6 +104,8 @@ fn mint_works_increments_counter_on_multiple_pools() {
 fn mint_works_with_existing_pool() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
+	let pool_id_2: AssetId = 10001;
 	let total_a: u128 = expand_to_decimals(100u128);
 	let total_b: u128 = expand_to_decimals(100u128);
 	let amount_a: u128 = expand_to_decimals(10u128);
@@ -112,6 +120,7 @@ fn mint_works_with_existing_pool() {
 			let expected_liquidity = expand_to_decimals(25u128);
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -123,6 +132,7 @@ fn mint_works_with_existing_pool() {
 
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
+				pool_id_2,
 				asset_a,
 				asset_b,
 				second_amount_a,
@@ -143,7 +153,7 @@ fn mint_works_with_existing_pool() {
 
 			// Ensure correct events are triggered
 			frame_system::Pallet::<Test>::assert_has_event(RuntimeEvent::Dex(
-				Event::LiquidityPoolCreated(asset_a, asset_b),
+				Event::LiquidityPoolCreated(pool_id, asset_a, asset_b),
 			));
 			frame_system::Pallet::<Test>::assert_has_event(RuntimeEvent::Dex(
 				Event::LiquidityAdded(asset_a, asset_b, second_amount_a, second_amount_b),
@@ -155,6 +165,7 @@ fn mint_works_with_existing_pool() {
 fn mint_sorting_works() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(1u128);
 	let amount_b: u128 = expand_to_decimals(4u128);
 
@@ -165,6 +176,7 @@ fn mint_sorting_works() {
 			let expected_liquidity = expand_to_decimals(2u128);
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
+				pool_id,
 				asset_b,
 				asset_a,
 				amount_a,
@@ -188,7 +200,7 @@ fn mint_sorting_works() {
 
 			// Ensure correct events are triggered
 			frame_system::Pallet::<Test>::assert_has_event(RuntimeEvent::Dex(
-				Event::LiquidityPoolCreated(asset_a, asset_b),
+				Event::LiquidityPoolCreated(pool_id, asset_a, asset_b),
 			));
 			frame_system::Pallet::<Test>::assert_has_event(RuntimeEvent::Dex(
 				Event::LiquidityAdded(asset_a, asset_b, amount_a, amount_b),
@@ -200,6 +212,7 @@ fn mint_sorting_works() {
 fn mint_fails_with_invalid_assets() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(1u128);
 	let amount_b: u128 = expand_to_decimals(4u128);
 
@@ -210,6 +223,7 @@ fn mint_fails_with_invalid_assets() {
 			assert_noop!(
 				Dex::mint(
 					RuntimeOrigin::signed(ALICE.into()),
+					pool_id,
 					asset_a,
 					asset_a,
 					amount_a,
@@ -224,6 +238,7 @@ fn mint_fails_with_invalid_assets() {
 fn mint_fails_with_token_a_0_amount() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(1u128);
 	let amount_b: u128 = expand_to_decimals(4u128);
 
@@ -232,7 +247,14 @@ fn mint_fails_with_token_a_0_amount() {
 		.build()
 		.execute_with(|| {
 			assert_noop!(
-				Dex::mint(RuntimeOrigin::signed(ALICE.into()), asset_a, asset_b, 0, amount_b),
+				Dex::mint(
+					RuntimeOrigin::signed(ALICE.into()),
+					pool_id,
+					asset_a,
+					asset_b,
+					0,
+					amount_b
+				),
 				Error::<Test>::InsufficientInputAmount
 			);
 		});
@@ -242,6 +264,7 @@ fn mint_fails_with_token_a_0_amount() {
 fn mint_fails_with_token_b_0_amount() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(1u128);
 	let amount_b: u128 = expand_to_decimals(4u128);
 
@@ -250,7 +273,14 @@ fn mint_fails_with_token_b_0_amount() {
 		.build()
 		.execute_with(|| {
 			assert_noop!(
-				Dex::mint(RuntimeOrigin::signed(ALICE.into()), asset_a, asset_b, amount_a, 0),
+				Dex::mint(
+					RuntimeOrigin::signed(ALICE.into()),
+					pool_id,
+					asset_a,
+					asset_b,
+					amount_a,
+					0
+				),
 				Error::<Test>::InsufficientInputAmount
 			);
 		});
@@ -260,6 +290,7 @@ fn mint_fails_with_token_b_0_amount() {
 fn mint_fails_with_insufficient_liquidity() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = 1;
 	let amount_b: u128 = 4;
 
@@ -270,6 +301,7 @@ fn mint_fails_with_insufficient_liquidity() {
 			assert_noop!(
 				Dex::mint(
 					RuntimeOrigin::signed(ALICE.into()),
+					pool_id,
 					asset_a,
 					asset_b,
 					amount_a,
@@ -284,6 +316,7 @@ fn mint_fails_with_insufficient_liquidity() {
 fn mint_fails_with_unknown_asset_id_a() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = 1;
 	let amount_b: u128 = 4;
 
@@ -294,6 +327,7 @@ fn mint_fails_with_unknown_asset_id_a() {
 			assert_noop!(
 				Dex::mint(
 					RuntimeOrigin::signed(ALICE.into()),
+					pool_id,
 					asset_a,
 					asset_b,
 					amount_a,
@@ -308,6 +342,7 @@ fn mint_fails_with_unknown_asset_id_a() {
 fn mint_fails_with_unknown_asset_id_b() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = 1;
 	let amount_b: u128 = 4;
 
@@ -318,6 +353,7 @@ fn mint_fails_with_unknown_asset_id_b() {
 			assert_noop!(
 				Dex::mint(
 					RuntimeOrigin::signed(ALICE.into()),
+					pool_id,
 					asset_a,
 					asset_b,
 					amount_a,

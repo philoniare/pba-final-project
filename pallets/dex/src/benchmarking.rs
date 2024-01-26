@@ -16,6 +16,7 @@ mod benchmarks {
 	fn mint() {
 		let asset_a: AssetIdOf<T> = 1u32;
 		let asset_b: AssetIdOf<T> = 2u32;
+		let pool_id: AssetIdOf<T> = 100u32;
 		let amount_a: AssetBalanceOf<T> = 100000u32.into();
 		let amount_b: AssetBalanceOf<T> = 200000u32.into();
 		let caller: T::AccountId = whitelisted_caller();
@@ -27,7 +28,7 @@ mod benchmarks {
 		let _ = T::Fungibles::mint_into(asset_b.clone(), &caller, 1_000_000_000u32.into());
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(caller.clone()), asset_a, asset_b, amount_a, amount_b);
+		_(RawOrigin::Signed(caller.clone()), pool_id, asset_a, asset_b, amount_a, amount_b);
 
 		let pool_key = AssetPair::new(asset_a.clone(), asset_b.clone());
 		// Panics if pool does not exist

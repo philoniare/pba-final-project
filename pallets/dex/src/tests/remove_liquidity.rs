@@ -7,6 +7,7 @@ use frame_support::{assert_noop, assert_ok};
 fn burn_works() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(3u128);
 	let amount_b: u128 = expand_to_decimals(3u128);
 
@@ -18,6 +19,7 @@ fn burn_works() {
 
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -60,6 +62,7 @@ fn burn_works() {
 fn burn_works_when_burning_max_lp() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(3u128);
 	let amount_b: u128 = expand_to_decimals(3u128);
 
@@ -69,6 +72,7 @@ fn burn_works_when_burning_max_lp() {
 		.execute_with(|| {
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -106,6 +110,8 @@ fn burn_works_when_burning_max_lp() {
 fn burn_amounts_works_correctly() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
+	let pool_id_2: AssetId = 10001;
 	let total_a: u128 = expand_to_decimals(100u128);
 	let total_b: u128 = expand_to_decimals(100u128);
 	let amount_a: u128 = expand_to_decimals(10u128);
@@ -128,6 +134,7 @@ fn burn_amounts_works_correctly() {
 
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -139,6 +146,7 @@ fn burn_amounts_works_correctly() {
 
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
+				pool_id_2,
 				asset_a,
 				asset_b,
 				second_amount_a,
@@ -174,6 +182,7 @@ fn burn_amounts_works_correctly() {
 fn burn_fails_on_identical_assets() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(1u128);
 	let amount_b: u128 = expand_to_decimals(4u128);
 
@@ -183,6 +192,7 @@ fn burn_fails_on_identical_assets() {
 		.execute_with(|| {
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -219,6 +229,7 @@ fn burn_fails_on_nonexistent_pool() {
 fn burn_fails_on_insufficient_lp_balance() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(1u128);
 	let amount_b: u128 = expand_to_decimals(4u128);
 
@@ -228,6 +239,7 @@ fn burn_fails_on_insufficient_lp_balance() {
 		.execute_with(|| {
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,

@@ -8,6 +8,7 @@ use sp_runtime::Perbill;
 fn fetching_token_ratio_works_on_a_to_b() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(10u128);
 	let amount_b: u128 = expand_to_decimals(50u128);
 
@@ -17,6 +18,7 @@ fn fetching_token_ratio_works_on_a_to_b() {
 		.execute_with(|| {
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -31,6 +33,7 @@ fn fetching_token_ratio_works_on_a_to_b() {
 fn fetching_token_ratio_works_on_b_to_a() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(100u128);
 	let amount_b: u128 = expand_to_decimals(50u128);
 
@@ -40,6 +43,7 @@ fn fetching_token_ratio_works_on_b_to_a() {
 		.execute_with(|| {
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -54,6 +58,7 @@ fn fetching_token_ratio_works_on_b_to_a() {
 fn fetching_token_ratio_fails_on_identical_assets() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(10u128);
 	let amount_b: u128 = expand_to_decimals(50u128);
 
@@ -63,6 +68,7 @@ fn fetching_token_ratio_fails_on_identical_assets() {
 		.execute_with(|| {
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -119,6 +125,7 @@ fn fetching_token_ratio_fails_on_unknown_asset_b() {
 fn fetching_price_for_works_from_a_b() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(10u128);
 	let amount_b: u128 = expand_to_decimals(50u128);
 
@@ -128,6 +135,7 @@ fn fetching_price_for_works_from_a_b() {
 		.execute_with(|| {
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -142,6 +150,7 @@ fn fetching_price_for_works_from_a_b() {
 fn fetching_price_for_works_from_b_a() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(300u128);
 	let amount_b: u128 = expand_to_decimals(40u128);
 
@@ -151,6 +160,7 @@ fn fetching_price_for_works_from_b_a() {
 		.execute_with(|| {
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -165,6 +175,7 @@ fn fetching_price_for_works_from_b_a() {
 fn fetching_price_fails_on_identical_assets() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(10u128);
 	let amount_b: u128 = expand_to_decimals(50u128);
 
@@ -174,6 +185,7 @@ fn fetching_price_fails_on_identical_assets() {
 		.execute_with(|| {
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,

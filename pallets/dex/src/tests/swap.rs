@@ -7,6 +7,7 @@ use frame_support::{assert_noop, assert_ok};
 fn swapping_token_a_works() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let total_a: u128 = expand_to_decimals(100u128);
 	let total_b: u128 = expand_to_decimals(100u128);
 	let amount_a: u128 = expand_to_decimals(10u128);
@@ -19,6 +20,7 @@ fn swapping_token_a_works() {
 			let swap_amount = expand_to_decimals(1u128);
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -44,6 +46,7 @@ fn swapping_token_a_works() {
 fn swapping_token_b_works() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(50u128);
 	let amount_b: u128 = expand_to_decimals(10u128);
 	ExtBuilder::default()
@@ -55,6 +58,7 @@ fn swapping_token_b_works() {
 
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_b,
@@ -118,6 +122,7 @@ fn swapping_fails_on_idential_assets() {
 fn swapping_fails_on_zero_amount_in() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(50u128);
 	let amount_b: u128 = expand_to_decimals(10u128);
 	ExtBuilder::default()
@@ -126,6 +131,7 @@ fn swapping_fails_on_zero_amount_in() {
 		.execute_with(|| {
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,
@@ -142,6 +148,7 @@ fn swapping_fails_on_zero_amount_in() {
 fn swapping_fails_on_greater_than_pool_amount() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
+	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(50u128);
 	let amount_b: u128 = expand_to_decimals(10u128);
 	ExtBuilder::default()
@@ -150,6 +157,7 @@ fn swapping_fails_on_greater_than_pool_amount() {
 		.execute_with(|| {
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
+				pool_id,
 				asset_a,
 				asset_b,
 				amount_a,

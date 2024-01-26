@@ -65,6 +65,11 @@ To test while developing, without a full build (thus reduce time to results):
 cargo t -p pallet-dex
 ```
 
+### Running Benchmarks:
+```sh
+cargo test --package pallet-dex --features runtime-benchmarks
+```
+
 ### Build
 
 Build the node without launching it, with `release` optimizations:

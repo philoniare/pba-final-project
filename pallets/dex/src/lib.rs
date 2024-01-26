@@ -78,10 +78,6 @@ pub mod pallet {
 	pub type LiquidityPools<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetPair<T>, LiquidityPool<T>>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn asset_counter)]
-	pub type AssetCounter<T: Config> = StorageValue<_, AssetIdOf<T>>;
-
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
@@ -106,7 +102,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Event for a new liquidity pool creation
-		LiquidityPoolCreated(AssetIdOf<T>, AssetIdOf<T>),
+		LiquidityPoolCreated(AssetIdOf<T>, AssetIdOf<T>, AssetIdOf<T>),
 		/// Event for adding a liquidity to an existing pool
 		LiquidityAdded(AssetIdOf<T>, AssetIdOf<T>, AssetBalanceOf<T>, AssetBalanceOf<T>),
 		/// Event for removing a liquidity from an existing pool
@@ -172,6 +168,7 @@ pub mod pallet {
 		#[pallet::weight(Weight::default())]
 		pub fn mint(
 			origin: OriginFor<T>,
+			lp_asset_id: AssetIdOf<T>,
 			asset_a: AssetIdOf<T>,
 			asset_b: AssetIdOf<T>,
 			amount_a: AssetBalanceOf<T>,
@@ -192,33 +189,23 @@ pub mod pallet {
 			let pool = match LiquidityPools::<T>::get(pool_asset_pair.clone()) {
 				Some(existing_pool) => existing_pool,
 				None => {
-					// Create the token for this pool
-					let mut asset_counter = match AssetCounter::<T>::get() {
-						Some(current_count) => current_count,
-						None => AssetIdOf::<T>::MAX,
-					};
-
 					// Create the asset with a specific asset_id
 					T::Fungibles::create(
-						asset_counter.clone(),
+						lp_asset_id.clone(),
 						pallet_id.clone(),
 						true,
 						AssetBalanceOf::<T>::one(),
 					)?;
 
 					// Create the liquidity pool if it doesn't exist
-					let new_pool = LiquidityPool { id: asset_counter, manager: pallet_id };
+					let new_pool = LiquidityPool { id: lp_asset_id.clone(), manager: pallet_id };
 					<LiquidityPools<T>>::set(&pool_asset_pair, Some(new_pool.clone()));
 
 					Self::deposit_event(crate::pallet::Event::LiquidityPoolCreated(
+						lp_asset_id,
 						pool_asset_pair.asset_a,
 						pool_asset_pair.asset_b,
 					));
-
-					// Increment counter for keeping track of asset_id
-					asset_counter =
-						asset_counter.checked_sub(1).ok_or(Error::<T>::AssetLimitReached)?;
-					AssetCounter::<T>::set(Some(asset_counter));
 
 					new_pool
 				},
