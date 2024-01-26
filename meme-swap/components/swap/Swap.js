@@ -29,6 +29,13 @@ import { useToast } from "@/components/ui/use-toast"
 import { useAccount } from "./AccountContext"
 import { useSubstrate } from "./SubstrateContext"
 
+const ASSET_IDS = {
+  "DOGE": 5,
+  "SHIP": 6,
+  "PEPE": 7,
+  "BONK": 8,
+}
+
 const TOKENS = [
   {
     symbol: "DOGE",
@@ -66,8 +73,11 @@ const Swap = () => {
 
         // Use the injected account for signing
         const injector = await web3FromAddress(address)
+        // Need to manually specify the first param (asset_id)
+        // Ideally, would create a special indexer for keeping
+        // track of existing asset_ids
         const unsubscribe = await api.tx.dex
-          .mint(9997, 7, 8, 100000, 100000)
+          .mint(9997, ASSET_IDS[from], ASSET_IDS[to], parseInt(amount), parseInt(amount))
           .signAndSend(address, { signer: injector.signer }, ({ status }) => {
             setStatus(`Current status is ${status}`)
 
@@ -103,7 +113,7 @@ const Swap = () => {
         // Use the injected account for signing
         const injector = await web3FromAddress(address)
         const unsubscribe = await api.tx.dex
-          .swap(7, 8, 100000)
+          .swap(ASSET_IDS[from], ASSET_IDS[to], parseInt(amount))
           .signAndSend(address, { signer: injector.signer }, ({ status }) => {
             setStatus(`Current status is ${status}`)
 
