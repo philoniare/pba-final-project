@@ -1,5 +1,5 @@
 mod add_liquidity;
-mod mock;
+pub(crate) mod mock;
 mod remove_liquidity;
 mod swap;
 mod traits;
