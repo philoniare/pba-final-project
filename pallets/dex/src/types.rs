@@ -1,6 +1,6 @@
 use super::*;
 use frame_support::pallet_prelude::*;
-use sp_runtime::helpers_128bit::sqrt;
+use sp_runtime::traits::IntegerSquareRoot;
 use sp_std::cmp::min;
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -35,7 +35,7 @@ impl<T: Config> LiquidityPool<T> {
 		liquidity: AssetBalanceOf<T>,
 		who: &AccountIdOf<T>,
 	) -> DispatchResult {
-		let total_issuance = T::Fungibles::total_issuance(self.id);
+		let total_issuance = T::Fungibles::total_issuance(self.id.clone());
 
 		let (token_a_reserve, token_b_reserve) = self.get_reserve(&asset_pair)?;
 
@@ -69,9 +69,9 @@ impl<T: Config> LiquidityPool<T> {
 			asset_pair
 		};
 		let (token_in_reserve, token_out_reserve) = self.get_reserve(&flow_asset_pair)?;
-		ensure!(amount_in > 0, Error::<T>::InsufficientInputAmount);
+		ensure!(amount_in > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientInputAmount);
 		ensure!(
-			token_in_reserve > amount_in && token_out_reserve > 0,
+			token_in_reserve > amount_in && token_out_reserve > AssetBalanceOf::<T>::zero(),
 			Error::<T>::InsufficientLiquidity
 		);
 
@@ -93,6 +93,7 @@ impl<T: Config> LiquidityPool<T> {
 			return Ok(AssetBalanceOf::<T>::zero());
 		}
 		// Deduct fixed 0.3% fee from the swap, which is used to reward liquidity providers
+		// AssetBalanceOf::<T>::from()
 		let amount_without_fee = Self::safe_mul(amount_in, 997u128)?;
 		let ratio = Self::safe_mul(amount_without_fee, reserve_out)?;
 		let mut reserve_total = Self::safe_mul(reserve_in, 1000u128)?;
@@ -106,8 +107,8 @@ impl<T: Config> LiquidityPool<T> {
 		&self,
 		asset_pair: &AssetPair<T>,
 	) -> Result<(AssetBalanceOf<T>, AssetBalanceOf<T>), DispatchError> {
-		let asset_a_reserve = T::Fungibles::balance(asset_pair.asset_a, &self.manager);
-		let asset_b_reserve = T::Fungibles::balance(asset_pair.asset_b, &self.manager);
+		let asset_a_reserve = T::Fungibles::balance(asset_pair.asset_a.clone(), &self.manager);
+		let asset_b_reserve = T::Fungibles::balance(asset_pair.asset_b.clone(), &self.manager);
 		Ok((asset_a_reserve, asset_b_reserve))
 	}
 
@@ -125,10 +126,11 @@ impl<T: Config> LiquidityPool<T> {
 		if total_issuance == zero_balance {
 			let product = Self::safe_mul(amount_a, amount_b)?;
 			let min_liq = u128::from(T::MinimumLiquidity::get());
-			ensure!(sqrt(product) >= min_liq, Error::<T>::InsufficientLiquidity);
-			liquidity = Self::safe_sub(sqrt(product), min_liq)?;
+			let product_sqrt = product.integer_sqrt();
+			ensure!(product_sqrt >= min_liq, Error::<T>::InsufficientLiquidity);
+			liquidity = Self::safe_sub(product_sqrt, min_liq)?;
 			T::Fungibles::mint_into(
-				self.id,
+				self.id.clone(),
 				&self.manager,
 				u128::from(T::MinimumLiquidity::get()),
 			)?;
@@ -153,7 +155,7 @@ impl<T: Config> LiquidityPool<T> {
 		amount_b: AssetBalanceOf<T>,
 		who: &AccountIdOf<T>,
 	) -> DispatchResult {
-		let total_issuance = T::Fungibles::total_issuance(self.id);
+		let total_issuance = T::Fungibles::total_issuance(self.id.clone());
 		let (token_a_reserve, token_b_reserve) = self.get_reserve(&asset_pair)?;
 
 		let liquidity = self.calculate_liquidity(
@@ -166,10 +168,10 @@ impl<T: Config> LiquidityPool<T> {
 		ensure!(liquidity > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientLiquidity);
 
 		// Mint & Send LP Token to the caller
-		T::Fungibles::mint_into(self.id, who, liquidity)?;
+		T::Fungibles::mint_into(self.id.clone(), who, liquidity)?;
 		// Transfer provided tokens to the pool
-		self.transfer_in(asset_pair.asset_a, &who, amount_a)?;
-		self.transfer_in(asset_pair.asset_b, &who, amount_b)?;
+		self.transfer_in(asset_pair.asset_a.clone(), &who, amount_a)?;
+		self.transfer_in(asset_pair.asset_b.clone(), &who, amount_b)?;
 
 		Ok(())
 	}

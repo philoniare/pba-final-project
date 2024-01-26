@@ -231,8 +231,8 @@ pub mod pallet {
 			pool.add_liquidity(&pool_asset_pair, amount_a, amount_b, &who)?;
 
 			Self::deposit_event(Event::LiquidityAdded(
-				pool_asset_pair.asset_a,
-				pool_asset_pair.asset_b,
+				pool_asset_pair.asset_a.clone(),
+				pool_asset_pair.asset_b.clone(),
 				amount_a,
 				amount_b,
 			));
@@ -275,7 +275,7 @@ pub mod pallet {
 			token_amount: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			Self::ensure_assets_exist(asset_a, asset_b)?;
+			Self::ensure_assets_exist(asset_a.clone(), asset_b.clone())?;
 			ensure!(asset_a != asset_b, Error::<T>::IdenticalAssets);
 			// Make sure the pool exists
 			let pool_asset_pair = AssetPair::new(asset_a.clone(), asset_b.clone());
@@ -284,7 +284,11 @@ pub mod pallet {
 
 			pool.remove_liquidity(pool_asset_pair, token_amount, &who)?;
 
-			Self::deposit_event(Event::LiquidityRemoved(asset_a, asset_b, token_amount));
+			Self::deposit_event(Event::LiquidityRemoved(
+				asset_a.clone(),
+				asset_b.clone(),
+				token_amount,
+			));
 			Ok(())
 		}
 
@@ -329,7 +333,13 @@ pub mod pallet {
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
 
 			// Swapping for asset_in (asset_out) in the pool with amount_in of asset_in
-			pool.swap(&who, pool_asset_pair.clone(), asset_in, asset_out, amount_in)?;
+			pool.swap(
+				&who,
+				pool_asset_pair.clone(),
+				asset_in.clone(),
+				asset_out.clone(),
+				amount_in,
+			)?;
 
 			Self::deposit_event(Event::Swapped(
 				pool_asset_pair.asset_a,
@@ -344,7 +354,7 @@ pub mod pallet {
 	impl<T: Config> traits::TokenRatio for Pallet<T> {
 		type AssetId = AssetIdOf<T>;
 		fn ratio(token_a: Self::AssetId, token_b: Self::AssetId) -> Result<Perbill, DispatchError> {
-			let pool_key = AssetPair::new(token_a, token_b);
+			let pool_key = AssetPair::new(token_a.clone(), token_b.clone());
 			Self::ensure_assets_exist(token_a, token_b)?;
 			ensure!(token_a != token_b, Error::<T>::IdenticalAssets);
 			let pool = <LiquidityPools<T>>::get(pool_key.clone())
@@ -353,7 +363,7 @@ pub mod pallet {
 			let ratio_key = if token_a == pool_key.asset_a {
 				pool_key
 			} else {
-				AssetPair { asset_a: token_a, asset_b: token_b }
+				AssetPair { asset_a: token_a.clone(), asset_b: token_b.clone() }
 			};
 			let (token_a_reserve, token_b_reserve) = pool.get_reserve(&ratio_key)?;
 			Self::calculate_perbill_ratio(token_a_reserve, token_b_reserve)
@@ -373,12 +383,14 @@ pub mod pallet {
 			Self::ensure_assets_exist(asset_in, asset_out)?;
 			ensure!(asset_in != asset_out, Error::<T>::IdenticalAssets);
 
-			let pool_key = AssetPair::new(asset_in, asset_out);
+			let pool_key = AssetPair::new(asset_in.clone(), asset_out.clone());
 			let pool = <LiquidityPools<T>>::get(pool_key.clone())
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
 
-			let (reserve_in, reserve_out) =
-				pool.get_reserve(&AssetPair { asset_a: asset_in, asset_b: asset_out })?;
+			let (reserve_in, reserve_out) = pool.get_reserve(&AssetPair {
+				asset_a: asset_in.clone(),
+				asset_b: asset_out.clone(),
+			})?;
 			pool.calculate_output_for(amount_in, reserve_in, reserve_out)
 		}
 	}
