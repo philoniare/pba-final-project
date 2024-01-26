@@ -29,10 +29,11 @@ If you have any questions or need further clarification, feel free to reach out 
 
 **MeMeSwap: A new playground for meme coin enthusiasts. Happy Swapping!**
 
-## [Substrate Node Template](https://github.com/substrate-developer-hub/substrate-node-template)
+## Design Considerations
+- My pallet assumes that AssetId is an integer generic so that it can be used for ordering. We would later on add a functionality to reward early liquidity provider creators. 
 
-A fresh FRAME-based [Substrate](https://www.substrate.io/) node, ready for hacking :rocket:
 
+## Running locally
 ### Setup
 
 Please first check the latest information on getting starting with Substrate dependencies required to build this project [here](https://docs.substrate.io/main-docs/install/).
