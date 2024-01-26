@@ -1,5 +1,4 @@
 use super::*;
-use frame_support::pallet_prelude::*;
 use sp_runtime::traits::IntegerSquareRoot;
 use sp_std::cmp::min;
 
@@ -121,19 +120,19 @@ impl<T: Config> LiquidityPool<T> {
 		token_b_reserve: AssetBalanceOf<T>,
 	) -> Result<AssetBalanceOf<T>, DispatchError> {
 		let zero_balance = AssetBalanceOf::<T>::zero();
-		let mut liquidity = zero_balance;
 
-		if total_issuance == zero_balance {
+		return if total_issuance == zero_balance {
 			let product = Self::safe_mul(amount_a, amount_b)?;
 			let min_liq: AssetBalanceOf<T> = T::MinimumLiquidity::get().into();
 			let product_sqrt = product.integer_sqrt();
 			ensure!(product_sqrt >= min_liq.into(), Error::<T>::InsufficientLiquidity);
-			liquidity = Self::safe_sub(product_sqrt, min_liq)?;
+			let liquidity = Self::safe_sub(product_sqrt, min_liq)?;
 			T::Fungibles::mint_into(
 				self.id.clone(),
 				&self.manager,
 				T::MinimumLiquidity::get().into(),
 			)?;
+			Ok(liquidity)
 		} else {
 			// Get current reserved amounts for each asset
 			let a_ratio = Self::safe_mul(amount_a, total_issuance)?;
@@ -142,10 +141,8 @@ impl<T: Config> LiquidityPool<T> {
 			let b_ratio = Self::safe_mul(amount_b, total_issuance)?;
 			let token_b_amount = Self::safe_div(b_ratio, token_b_reserve)?;
 
-			liquidity = min(token_a_amount, token_b_amount);
-		}
-
-		Ok(liquidity)
+			Ok(min(token_a_amount, token_b_amount))
+		};
 	}
 
 	pub fn add_liquidity(

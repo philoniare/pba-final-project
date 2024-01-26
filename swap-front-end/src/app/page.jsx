@@ -3,7 +3,7 @@ import React, {useEffect, useState} from "react";
 import dynamic from "next/dynamic";
 
 const PolkadotDapp = dynamic(
-    () => import('@/components/swap-interface'),
+    () => import('@/components/MainApp'),
     { ssr: false }
 );
 

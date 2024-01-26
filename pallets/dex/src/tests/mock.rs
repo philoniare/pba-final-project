@@ -1,8 +1,4 @@
 use crate as pallet_dex;
-use crate::AssetBalanceOf;
-use codec::Compact;
-use frame_support::assert_ok;
-use frame_support::pallet_prelude::*;
 use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU16, ConstU32, ConstU64};
 use frame_support::{parameter_types, PalletId};
 use frame_system::{EnsureRoot, EnsureSigned};
@@ -19,15 +15,10 @@ pub type Balance = u128;
 pub type AssetId = u32;
 pub type AccountId = u64;
 pub const MIN_LIQUIDITY: u128 = 1000;
-pub type NativeBalance = <Test as crate::Config>::NativeBalance;
 pub type Fungibles = <Test as crate::Config>::Fungibles;
 
-pub const DOT: AssetId = 100;
-pub const USDC: AssetId = 101;
 pub const ADMIN: AccountId = 1;
 pub const ALICE: AccountId = 2;
-pub const BOB: AccountId = 3;
-pub const MINT_BALANCE: u128 = 1;
 
 parameter_types! {
 	pub const MemeSwapPallet: PalletId = PalletId(*b"MeMeSwap");
@@ -146,8 +137,8 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 		let mut assets = vec![];
-		for (asset_id, account_id, balance) in self.endowed_balances.clone().into_iter() {
-			assets.push((asset_id, ADMIN, true, MINT_BALANCE));
+		for (asset_id, _, _) in self.endowed_balances.clone().into_iter() {
+			assets.push((asset_id, ADMIN, true, 1));
 		}
 
 		pallet_assets::GenesisConfig::<Test> {
@@ -162,22 +153,6 @@ impl ExtBuilder {
 		ext.execute_with(|| System::set_block_number(1));
 		ext
 	}
-}
-
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::<Test>::default().build_storage().unwrap().into()
-}
-
-pub(crate) fn create_and_mint(asset: u32, user: u64, amount: u128) -> Result<(), &'static str> {
-	assert_ok!(Assets::force_create(
-		RuntimeOrigin::root(),
-		Compact::from(asset),
-		ADMIN,
-		true,
-		MINT_BALANCE
-	));
-	assert_ok!(Assets::mint(RuntimeOrigin::signed(ADMIN), Compact::from(asset), user, amount));
-	Ok(())
 }
 
 pub(super) fn expand_to_decimals(n: u128) -> u128 {

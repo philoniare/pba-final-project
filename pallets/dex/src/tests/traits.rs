@@ -3,7 +3,6 @@ use crate::traits::{OraclePrice, TokenRatio};
 use crate::Error;
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::Perbill;
-use std::io::ErrorKind::PermissionDenied;
 
 #[test]
 fn fetching_token_ratio_works_on_a_to_b() {
@@ -92,7 +91,6 @@ fn fetching_token_ratio_fails_on_nonexistent_pool() {
 fn fetching_token_ratio_fails_on_unknown_asset_a() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
-	let amount_a: u128 = expand_to_decimals(10u128);
 	let amount_b: u128 = expand_to_decimals(50u128);
 
 	ExtBuilder::default()
@@ -108,7 +106,6 @@ fn fetching_token_ratio_fails_on_unknown_asset_b() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
 	let amount_a: u128 = expand_to_decimals(10u128);
-	let amount_b: u128 = expand_to_decimals(50u128);
 
 	ExtBuilder::default()
 		.with_endowed_balances(vec![(asset_a, ALICE, amount_a)])
@@ -208,7 +205,6 @@ fn fetching_price_fails_on_nonexistent_pool() {
 fn fetching_price_fails_on_unknown_asset_a() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
-	let amount_a: u128 = expand_to_decimals(10u128);
 	let amount_b: u128 = expand_to_decimals(50u128);
 
 	ExtBuilder::default()
@@ -224,7 +220,6 @@ fn fetching_price_fails_on_unknown_asset_b() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
 	let amount_a: u128 = expand_to_decimals(10u128);
-	let amount_b: u128 = expand_to_decimals(50u128);
 
 	ExtBuilder::default()
 		.with_endowed_balances(vec![(asset_a, ALICE, amount_a)])

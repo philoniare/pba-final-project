@@ -18,7 +18,7 @@ Welcome to MeMeSwap! Built as a version of Uniswap V2 specifically for Meme Coin
 
 
 ## 📚 Documentation
-- The html documentation can be found under `/docs/index.html`
+- The html documentation can be generated using the command show in the `Generate docs` section
 
 ## 💗 Support
 Give a ⭐️ if this project helped you! Your support helps us continuously improve and maintain this project.
@@ -38,7 +38,7 @@ If you have any questions or need further clarification, feel free to reach out 
 
 Please first check the latest information on getting starting with Substrate dependencies required to build this project [here](https://docs.substrate.io/main-docs/install/).
 
-### See docs
+### Generate docs
 ```sh
 cargo +nightly doc --open --package pallet-dex --no-deps
 ```

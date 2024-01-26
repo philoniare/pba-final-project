@@ -37,12 +37,9 @@ pub type AssetBalanceOf<T> = <<T as Config>::Fungibles as fungibles::Inspect<
 pub mod pallet {
 	use crate::types::AssetPair;
 	use crate::*;
-	use frame_support::{
-		pallet_prelude::*,
-		traits::{
-			fungible::{self},
-			fungibles::{self},
-		},
+	use frame_support::traits::{
+		fungible::{self},
+		fungibles::{self},
 	};
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::{AccountIdConversion, Bounded};
@@ -98,7 +95,7 @@ pub mod pallet {
 			// Initialize pallet balance for creating and minting LP Tokens
 			use frame_support::traits::fungible::*;
 			let account_id = T::PalletId::get().into_account_truncating();
-			T::NativeBalance::mint_into(
+			let _ = T::NativeBalance::mint_into(
 				&account_id,
 				BalanceOf::<T>::max_value() / 10_000u32.into(),
 			);

@@ -1,6 +1,6 @@
 use crate::tests::mock::*;
 use crate::types::AssetPair;
-use crate::{Error, Event, LiquidityPools};
+use crate::{Error, LiquidityPools};
 use frame_support::{assert_noop, assert_ok};
 
 #[test]
@@ -131,7 +131,6 @@ fn swapping_fails_on_zero_amount_in() {
 				amount_a,
 				amount_b
 			));
-			let swap_amount = expand_to_decimals(1u128);
 			assert_noop!(
 				Dex::swap(RuntimeOrigin::signed(ALICE), asset_a, asset_b, 0),
 				Error::<Test>::InsufficientInputAmount

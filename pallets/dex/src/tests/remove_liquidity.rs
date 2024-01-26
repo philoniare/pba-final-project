@@ -1,6 +1,5 @@
 use crate::tests::mock::*;
-use crate::types::{AssetPair, LiquidityPool};
-use crate::Call::burn;
+use crate::types::AssetPair;
 use crate::{Error, Event, LiquidityPools};
 use frame_support::{assert_noop, assert_ok};
 
@@ -38,8 +37,6 @@ fn burn_works() {
 			// Burning of LP tokens successful
 			assert_eq!(Fungibles::balance(pool.id, ALICE), 0);
 			assert_eq!(Fungibles::total_supply(pool.id), MIN_LIQUIDITY);
-			let asset_a_balance = Fungibles::balance(asset_a, ALICE);
-			let asset_b_balance = Fungibles::balance(asset_b, ALICE);
 
 			// Pallet manager balances have been updated
 			assert_eq!(Fungibles::balance(asset_a, pool.manager), MIN_LIQUIDITY);
@@ -70,8 +67,6 @@ fn burn_works_when_burning_max_lp() {
 		.with_endowed_balances(vec![(asset_a, ALICE, amount_a), (asset_b, ALICE, amount_b)])
 		.build()
 		.execute_with(|| {
-			let expected_liquidity = expand_to_decimals(10u128) - MIN_LIQUIDITY;
-
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
 				asset_a,
@@ -88,8 +83,6 @@ fn burn_works_when_burning_max_lp() {
 			// Burning of LP tokens successful
 			assert_eq!(Fungibles::balance(pool.id, ALICE), 0);
 			assert_eq!(Fungibles::total_supply(pool.id), MIN_LIQUIDITY);
-			let asset_a_balance = Fungibles::balance(asset_a, ALICE);
-			let asset_b_balance = Fungibles::balance(asset_b, ALICE);
 
 			// Pallet manager balances have been updated
 			assert_eq!(Fungibles::balance(asset_a, pool.manager), MIN_LIQUIDITY);
@@ -125,6 +118,14 @@ fn burn_amounts_works_correctly() {
 		.build()
 		.execute_with(|| {
 			let expected_liquidity = expand_to_decimals(25u128);
+			println!("Amounts: {} {}", amount_a, amount_b);
+			println!(
+				"Amounts: {} {}",
+				Fungibles::balance(asset_a, ALICE),
+				Fungibles::balance(asset_b, ALICE)
+			);
+			println!("Assets: {} {}", asset_a, asset_b);
+
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
 				asset_a,
@@ -153,15 +154,10 @@ fn burn_amounts_works_correctly() {
 				expected_liquidity - burn_amount - MIN_LIQUIDITY
 			);
 			assert_eq!(Fungibles::total_supply(pool.id), expected_liquidity - burn_amount);
-			let asset_a_balance = Fungibles::balance(asset_a, ALICE);
-			let asset_b_balance = Fungibles::balance(asset_b, ALICE);
 
 			// Pallet manager balances have been updated
 			assert_eq!(Fungibles::balance(asset_a, pool.manager), 576000000000);
 			assert_eq!(Fungibles::balance(asset_b, pool.manager), 480000000000);
-
-			let token_a_issuance = Fungibles::total_supply(asset_a);
-			let token_b_issuance = Fungibles::total_supply(asset_b);
 
 			// User balances have been updated
 			assert_eq!(Fungibles::balance(asset_a, ALICE), 424000000000);

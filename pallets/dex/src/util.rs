@@ -2,30 +2,9 @@ use crate::*;
 use frame_support::ensure;
 use frame_support::traits::tokens::{Fortitude, Precision, Preservation};
 use sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub};
-use sp_runtime::{DispatchError, FixedPointNumber, FixedU128, Perbill};
+use sp_runtime::DispatchError;
 
 impl<T: Config> Pallet<T> {
-	pub(super) fn calculate_perbill_ratio(
-		numerator: AssetBalanceOf<T>,
-		denominator: AssetBalanceOf<T>,
-	) -> Result<Perbill, DispatchError> {
-		if denominator == AssetBalanceOf::<T>::zero() {
-			return Err(DispatchError::from(Error::<T>::Arithmetic));
-		}
-
-		let decimals = T::TokenDecimals::get();
-		let multiplier: AssetBalanceOf<T> = 10u32.pow(decimals).into();
-		let product = numerator
-			.checked_mul(&multiplier)
-			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
-		let ratio = product
-			.checked_div(&denominator)
-			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
-
-		// Ok(Perbill::from_parts(ratio))
-		Ok(Perbill::from_parts(0))
-	}
-
 	pub(super) fn ensure_assets_exist(
 		asset_a: AssetIdOf<T>,
 		asset_b: AssetIdOf<T>,
