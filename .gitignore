@@ -1,3 +1,4 @@
 target/
 .idea/
 .vscode
+swap-front-end/node_modules

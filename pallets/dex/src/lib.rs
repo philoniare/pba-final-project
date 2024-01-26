@@ -95,9 +95,13 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
+			// Initialize pallet balance for creating and minting tokens
 			use frame_support::traits::fungible::*;
-			let pallet_id: T::AccountId = T::PalletId::get().into_account_truncating();
-			T::NativeBalance::mint_into(&pallet_id, BalanceOf::<T>::max_value());
+			let account_id = T::PalletId::get().into_account_truncating();
+			T::NativeBalance::mint_into(
+				&account_id,
+				BalanceOf::<T>::max_value() / 10_000u32.into(),
+			);
 		}
 	}
 
