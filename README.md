@@ -18,14 +18,6 @@ Welcome to MeMeSwap! Built as a version of Uniswap V2 specifically for Meme Coin
 
 ## 📚 Documentation
 - The html documentation can be generated using the command show in the `Generate docs` section
-- The FRAME call documentation is shown for your convenience:
-
-### Mint
-![mint](https://i.ibb.co/0sHKH66/Screenshot-2024-01-26-at-17-36-16.png)
-### Burn
-![burn](https://i.ibb.co/fnr3C3m/Screenshot-2024-01-26-at-17-37-51.png)
-### Swap
-![swap](https://i.ibb.co/Xjcg1QF/Screenshot-2024-01-26-at-17-38-36.png)
 
 ## Interfaces for other pallets:
 - **TokenRatio**: This is an interface that mandates any implementing class to provide a mechanism of calculating the ratio between two tokens. The implementing class defines the type of AssetId for the tokens.
