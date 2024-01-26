@@ -16,9 +16,23 @@ Welcome to MeMeSwap! Built as a version of Uniswap V2 specifically for Meme Coin
 - Follows the standard rewarding mechanism that rewards liquidity providers with the 0.3% of the swaps
 - Exposes Traits for fetching token ratio and amount needed to swap to other pallets acting as the price oracle for existing liquidity pools
 
-
 ## 📚 Documentation
 - The html documentation can be generated using the command show in the `Generate docs` section
+- The FRAME call documentation is shown for your convenience:
+
+### Mint
+![mint](https://i.ibb.co/0sHKH66/Screenshot-2024-01-26-at-17-36-16.png)
+### Burn
+![burn](https://i.ibb.co/fnr3C3m/Screenshot-2024-01-26-at-17-37-51.png)
+### Swap
+![swap](https://i.ibb.co/Xjcg1QF/Screenshot-2024-01-26-at-17-38-36.png)
+
+## Interfaces for other pallets:
+- **TokenRatio**: This is an interface that mandates any implementing class to provide a mechanism of calculating the ratio between two tokens. The implementing class defines the type of AssetId for the tokens.
+  The ratio function takes two tokens (identified by their Asset IDs) and returns a Perbill representation of their ratio. If the operation fails, it should return an error.
+- **OraclePrice**: This is another interface that necessitates any implementing class to provide a mechanism of getting price information. An oracle, in this context, is the ratio of assets in the liquidity pools, which provides direct insight into the relative valuation of specific assets. The implementing class defines the type of AssetId for the tokens and the Balance type to represent their associated values.
+  The `get_price_for` function takes the `asset_in` (the asset which to base the valuation), amount_in (the required amount of asset_in), and asset_out (the asset which you want to query the price for). If the operation fails, it should return an appropriate error.
+
 
 ## 💗 Support
 Give a ⭐️ if this project helped you! Your support helps us continuously improve and maintain this project.
