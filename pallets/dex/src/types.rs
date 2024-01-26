@@ -15,6 +15,7 @@ impl<T: Config> AssetPair<T> {
 		if asset_one <= asset_two {
 			AssetPair { asset_a: asset_one, asset_b: asset_two }
 		} else {
+			// Swap the two for ordering
 			AssetPair { asset_a: asset_two, asset_b: asset_one }
 		}
 	}
@@ -164,7 +165,9 @@ impl<T: Config> LiquidityPool<T> {
 		)?;
 		ensure!(liquidity > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientLiquidity);
 
+		// Mint & Send LP Token to the caller
 		T::Fungibles::mint_into(self.id, who, liquidity)?;
+		// Transfer provided tokens to the pool
 		self.transfer_in(asset_pair.asset_a, &who, amount_a)?;
 		self.transfer_in(asset_pair.asset_b, &who, amount_b)?;
 

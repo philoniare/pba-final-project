@@ -184,12 +184,12 @@ pub mod pallet {
 			Self::ensure_assets_exist(asset_a, asset_b)?;
 			// Assets should be different to create a pool
 			ensure!(asset_a != asset_b, Error::<T>::IdenticalAssets);
-			// Both amounts can be the same to create a liquidity pool
-			ensure!(amount_a > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientInputAmount);
-			ensure!(amount_b > AssetBalanceOf::<T>::zero(), Error::<T>::InsufficientInputAmount);
+			ensure!(
+				amount_a > AssetBalanceOf::<T>::zero() && amount_b > AssetBalanceOf::<T>::zero(),
+				Error::<T>::InsufficientInputAmount
+			);
 
 			let pool_asset_pair = AssetPair::new(asset_a.clone(), asset_b.clone());
-
 			let pallet_id: T::AccountId = T::PalletId::get().into_account_truncating();
 
 			let pool = match LiquidityPools::<T>::get(pool_asset_pair.clone()) {
@@ -221,7 +221,6 @@ pub mod pallet {
 					// Increment counter for keeping track of asset_id
 					asset_counter =
 						asset_counter.checked_sub(1).ok_or(Error::<T>::AssetLimitReached)?;
-
 					AssetCounter::<T>::set(Some(asset_counter));
 
 					new_pool
