@@ -63,7 +63,7 @@ pub mod pallet {
 			+ fungible::freeze::Mutate<Self::AccountId>;
 
 		/// Type to access the Assets Pallet.
-		type Fungibles: fungibles::Inspect<Self::AccountId, AssetId = u32, Balance = u128>
+		type Fungibles: fungibles::Inspect<Self::AccountId, AssetId = u32>
 			+ fungibles::Mutate<Self::AccountId>
 			+ fungibles::Create<Self::AccountId>;
 
@@ -71,7 +71,7 @@ pub mod pallet {
 		type PalletId: Get<PalletId>;
 
 		#[pallet::constant]
-		type TokenDecimals: Get<u8>;
+		type TokenDecimals: Get<u32>;
 
 		#[pallet::constant]
 		type MinimumLiquidity: Get<u32>;
@@ -366,8 +366,7 @@ pub mod pallet {
 				AssetPair { asset_a: token_a.clone(), asset_b: token_b.clone() }
 			};
 			let (token_a_reserve, token_b_reserve) = pool.get_reserve(&ratio_key)?;
-			Self::calculate_perbill_ratio(token_a_reserve, token_b_reserve)
-				.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))
+			Ok(Perbill::from_rational(token_a_reserve, token_b_reserve))
 		}
 	}
 

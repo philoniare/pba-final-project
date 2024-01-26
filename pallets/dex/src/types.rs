@@ -92,11 +92,11 @@ impl<T: Config> LiquidityPool<T> {
 		if reserve_in.is_zero() || reserve_out.is_zero() {
 			return Ok(AssetBalanceOf::<T>::zero());
 		}
+
 		// Deduct fixed 0.3% fee from the swap, which is used to reward liquidity providers
-		// AssetBalanceOf::<T>::from()
-		let amount_without_fee = Self::safe_mul(amount_in, 997u128)?;
+		let amount_without_fee = Self::safe_mul(amount_in, 997u32.into())?;
 		let ratio = Self::safe_mul(amount_without_fee, reserve_out)?;
-		let mut reserve_total = Self::safe_mul(reserve_in, 1000u128)?;
+		let mut reserve_total = Self::safe_mul(reserve_in, 1000u32.into())?;
 		reserve_total = Self::safe_add(reserve_total, amount_without_fee)?;
 		let total = Self::safe_div(ratio, reserve_total)?;
 
@@ -125,14 +125,14 @@ impl<T: Config> LiquidityPool<T> {
 
 		if total_issuance == zero_balance {
 			let product = Self::safe_mul(amount_a, amount_b)?;
-			let min_liq = u128::from(T::MinimumLiquidity::get());
+			let min_liq: AssetBalanceOf<T> = T::MinimumLiquidity::get().into();
 			let product_sqrt = product.integer_sqrt();
-			ensure!(product_sqrt >= min_liq, Error::<T>::InsufficientLiquidity);
+			ensure!(product_sqrt >= min_liq.into(), Error::<T>::InsufficientLiquidity);
 			liquidity = Self::safe_sub(product_sqrt, min_liq)?;
 			T::Fungibles::mint_into(
 				self.id.clone(),
 				&self.manager,
-				u128::from(T::MinimumLiquidity::get()),
+				T::MinimumLiquidity::get().into(),
 			)?;
 		} else {
 			// Get current reserved amounts for each asset

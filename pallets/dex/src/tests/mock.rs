@@ -1,4 +1,5 @@
 use crate as pallet_dex;
+use crate::AssetBalanceOf;
 use codec::Compact;
 use frame_support::assert_ok;
 use frame_support::pallet_prelude::*;
@@ -8,7 +9,7 @@ use frame_system::{EnsureRoot, EnsureSigned};
 use sp_core::{sp_std, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
-	BuildStorage,
+	BuildStorage, FixedU128,
 };
 use sp_std::prelude::*;
 use std::cell::RefCell;
@@ -30,7 +31,7 @@ pub const MINT_BALANCE: u128 = 1;
 
 parameter_types! {
 	pub const MemeSwapPallet: PalletId = PalletId(*b"MeMeSwap");
-	pub const TokenDecimals: u8 = 10;
+	pub const TokenDecimals: u32 = 10;
 	pub const MinimumLiquidity: u32 = 1000;
 }
 
@@ -177,4 +178,12 @@ pub(crate) fn create_and_mint(asset: u32, user: u64, amount: u128) -> Result<(),
 	));
 	assert_ok!(Assets::mint(RuntimeOrigin::signed(ADMIN), Compact::from(asset), user, amount));
 	Ok(())
+}
+
+pub(super) fn expand_to_decimals(n: u128) -> u128 {
+	n * 10u128.pow(10u32)
+}
+
+pub(super) fn decimals_to_numeric(n: u128) -> u128 {
+	FixedU128::from_inner(n).div(10u128.pow(10u32).into()).into_inner()
 }

@@ -8,14 +8,14 @@ use frame_support::{assert_noop, assert_ok};
 fn burn_works() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
-	let amount_a: u128 = Dex::expand_to_decimals(3u128);
-	let amount_b: u128 = Dex::expand_to_decimals(3u128);
+	let amount_a: u128 = expand_to_decimals(3u128);
+	let amount_b: u128 = expand_to_decimals(3u128);
 
 	ExtBuilder::default()
 		.with_endowed_balances(vec![(asset_a, ALICE, amount_a), (asset_b, ALICE, amount_b)])
 		.build()
 		.execute_with(|| {
-			let expected_liquidity = Dex::expand_to_decimals(3u128) - MIN_LIQUIDITY;
+			let expected_liquidity = expand_to_decimals(3u128) - MIN_LIQUIDITY;
 
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
@@ -63,14 +63,14 @@ fn burn_works() {
 fn burn_works_when_burning_max_lp() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
-	let amount_a: u128 = Dex::expand_to_decimals(3u128);
-	let amount_b: u128 = Dex::expand_to_decimals(3u128);
+	let amount_a: u128 = expand_to_decimals(3u128);
+	let amount_b: u128 = expand_to_decimals(3u128);
 
 	ExtBuilder::default()
 		.with_endowed_balances(vec![(asset_a, ALICE, amount_a), (asset_b, ALICE, amount_b)])
 		.build()
 		.execute_with(|| {
-			let expected_liquidity = Dex::expand_to_decimals(10u128) - MIN_LIQUIDITY;
+			let expected_liquidity = expand_to_decimals(10u128) - MIN_LIQUIDITY;
 
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE),
@@ -113,18 +113,18 @@ fn burn_works_when_burning_max_lp() {
 fn burn_amounts_works_correctly() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
-	let total_a: u128 = Dex::expand_to_decimals(100u128);
-	let total_b: u128 = Dex::expand_to_decimals(100u128);
-	let amount_a: u128 = Dex::expand_to_decimals(10u128);
-	let amount_b: u128 = Dex::expand_to_decimals(40u128);
-	let second_amount_a: u128 = Dex::expand_to_decimals(50u128);
-	let second_amount_b: u128 = Dex::expand_to_decimals(10u128);
+	let total_a: u128 = expand_to_decimals(100u128);
+	let total_b: u128 = expand_to_decimals(100u128);
+	let amount_a: u128 = expand_to_decimals(10u128);
+	let amount_b: u128 = expand_to_decimals(40u128);
+	let second_amount_a: u128 = expand_to_decimals(50u128);
+	let second_amount_b: u128 = expand_to_decimals(10u128);
 
 	ExtBuilder::default()
 		.with_endowed_balances(vec![(asset_a, ALICE, total_a), (asset_b, ALICE, total_b)])
 		.build()
 		.execute_with(|| {
-			let expected_liquidity = Dex::expand_to_decimals(25u128);
+			let expected_liquidity = expand_to_decimals(25u128);
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
 				asset_a,
@@ -134,7 +134,7 @@ fn burn_amounts_works_correctly() {
 			));
 			let pool_key = AssetPair { asset_a, asset_b };
 			let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
-			assert_eq!(Fungibles::total_supply(pool.id), Dex::expand_to_decimals(20u128));
+			assert_eq!(Fungibles::total_supply(pool.id), expand_to_decimals(20u128));
 
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
@@ -144,7 +144,7 @@ fn burn_amounts_works_correctly() {
 				second_amount_b
 			));
 
-			let burn_amount = Dex::expand_to_decimals(1u128);
+			let burn_amount = expand_to_decimals(1u128);
 			assert_ok!(Dex::burn(RuntimeOrigin::signed(ALICE), asset_a, asset_b, burn_amount));
 
 			// Burning of LP tokens successful
@@ -178,8 +178,8 @@ fn burn_amounts_works_correctly() {
 fn burn_fails_on_identical_assets() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
-	let amount_a: u128 = Dex::expand_to_decimals(1u128);
-	let amount_b: u128 = Dex::expand_to_decimals(4u128);
+	let amount_a: u128 = expand_to_decimals(1u128);
+	let amount_b: u128 = expand_to_decimals(4u128);
 
 	ExtBuilder::default()
 		.with_endowed_balances(vec![(asset_a, ALICE, amount_a), (asset_b, ALICE, amount_b)])
@@ -192,7 +192,7 @@ fn burn_fails_on_identical_assets() {
 				amount_a,
 				amount_b
 			));
-			let burn_amount = Dex::expand_to_decimals(1u128);
+			let burn_amount = expand_to_decimals(1u128);
 			assert_noop!(
 				Dex::burn(RuntimeOrigin::signed(ALICE), asset_a, asset_a, burn_amount),
 				Error::<Test>::IdenticalAssets
@@ -204,14 +204,14 @@ fn burn_fails_on_identical_assets() {
 fn burn_fails_on_nonexistent_pool() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
-	let amount_a: u128 = Dex::expand_to_decimals(1u128);
-	let amount_b: u128 = Dex::expand_to_decimals(4u128);
+	let amount_a: u128 = expand_to_decimals(1u128);
+	let amount_b: u128 = expand_to_decimals(4u128);
 
 	ExtBuilder::default()
 		.with_endowed_balances(vec![(asset_a, ALICE, amount_a), (asset_b, ALICE, amount_b)])
 		.build()
 		.execute_with(|| {
-			let burn_amount = Dex::expand_to_decimals(1u128);
+			let burn_amount = expand_to_decimals(1u128);
 			assert_noop!(
 				Dex::burn(RuntimeOrigin::signed(ALICE), asset_a, asset_b, burn_amount),
 				Error::<Test>::LiquidityPoolDoesNotExist
@@ -223,8 +223,8 @@ fn burn_fails_on_nonexistent_pool() {
 fn burn_fails_on_insufficient_lp_balance() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
-	let amount_a: u128 = Dex::expand_to_decimals(1u128);
-	let amount_b: u128 = Dex::expand_to_decimals(4u128);
+	let amount_a: u128 = expand_to_decimals(1u128);
+	let amount_b: u128 = expand_to_decimals(4u128);
 
 	ExtBuilder::default()
 		.with_endowed_balances(vec![(asset_a, ALICE, amount_a), (asset_b, ALICE, amount_b)])
@@ -237,7 +237,7 @@ fn burn_fails_on_insufficient_lp_balance() {
 				amount_a,
 				amount_b
 			));
-			let burn_amount = Dex::expand_to_decimals(3u128);
+			let burn_amount = expand_to_decimals(3u128);
 			assert_noop!(
 				Dex::burn(RuntimeOrigin::signed(ALICE), asset_a, asset_b, burn_amount),
 				Error::<Test>::InsufficientBurnBalance

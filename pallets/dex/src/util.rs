@@ -1,25 +1,29 @@
 use crate::*;
 use frame_support::ensure;
 use frame_support::traits::tokens::{Fortitude, Precision, Preservation};
+use sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub};
 use sp_runtime::{DispatchError, FixedPointNumber, FixedU128, Perbill};
 
 impl<T: Config> Pallet<T> {
-	pub(super) fn expand_to_decimals(n: AssetBalanceOf<T>) -> AssetBalanceOf<T> {
-		n * 10u128.pow(10u32)
-	}
-
-	pub(super) fn decimals_to_numeric(n: AssetBalanceOf<T>) -> AssetBalanceOf<T> {
-		FixedU128::from_inner(n).div(10u128.pow(10u32).into()).into_inner()
-	}
-
-	pub(super) fn calculate_perbill_ratio(numerator: u128, denominator: u128) -> Option<Perbill> {
-		if denominator == 0 {
-			return None;
+	pub(super) fn calculate_perbill_ratio(
+		numerator: AssetBalanceOf<T>,
+		denominator: AssetBalanceOf<T>,
+	) -> Result<Perbill, DispatchError> {
+		if denominator == AssetBalanceOf::<T>::zero() {
+			return Err(DispatchError::from(Error::<T>::Arithmetic));
 		}
 
-		let ratio = numerator as u128 * 1_000_000_000u128 / denominator as u128;
+		let decimals = T::TokenDecimals::get();
+		let multiplier: AssetBalanceOf<T> = 10u32.pow(decimals).into();
+		let product = numerator
+			.checked_mul(&multiplier)
+			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
+		let ratio = product
+			.checked_div(&denominator)
+			.ok_or_else(|| DispatchError::from(Error::<T>::Arithmetic))?;
 
-		Some(Perbill::from_parts(ratio.min(u32::MAX as u128) as u32))
+		// Ok(Perbill::from_parts(ratio))
+		Ok(Perbill::from_parts(0))
 	}
 
 	pub(super) fn ensure_assets_exist(
@@ -33,37 +37,9 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> LiquidityPool<T> {
-	pub(super) fn transfer_in(
-		&self,
-		asset: AssetIdOf<T>,
-		from: &AccountIdOf<T>,
-		amount: AssetBalanceOf<T>,
-	) -> Result<u128, DispatchError> {
-		T::Fungibles::transfer(asset, from, &self.manager, amount, Preservation::Expendable)
-	}
-
-	pub(super) fn transfer_out(
-		&self,
-		asset: AssetIdOf<T>,
-		to: &AccountIdOf<T>,
-		amount: AssetBalanceOf<T>,
-	) -> Result<u128, DispatchError> {
-		T::Fungibles::transfer(asset, &self.manager, to, amount, Preservation::Expendable)
-	}
-
-	pub(super) fn burn_lp(
-		&self,
-		who: &AccountIdOf<T>,
-		amount: AssetBalanceOf<T>,
-	) -> Result<u128, DispatchError> {
-		let lp_balance = T::Fungibles::balance(self.id, &who);
-		ensure!(lp_balance >= amount, Error::<T>::InsufficientBurnBalance);
-		T::Fungibles::burn_from(self.id, who, amount, Precision::Exact, Fortitude::Polite)
-	}
-
-	fn checked_operation<F, R>(x: R, y: R, func: F) -> Result<R, DispatchError>
+	fn checked_operation<F, R>(x: &R, y: &R, func: F) -> Result<R, DispatchError>
 	where
-		F: Fn(R, R) -> Option<R>,
+		F: Fn(&R, &R) -> Option<R>,
 		R: sp_runtime::traits::AtLeast32BitUnsigned,
 	{
 		func(x, y).ok_or(Error::<T>::Arithmetic.into())
@@ -73,27 +49,55 @@ impl<T: Config> LiquidityPool<T> {
 		x: AssetBalanceOf<T>,
 		y: AssetBalanceOf<T>,
 	) -> Result<AssetBalanceOf<T>, DispatchError> {
-		Self::checked_operation(x, y, AssetBalanceOf::<T>::checked_mul)
+		Self::checked_operation(&x, &y, |a, b| AssetBalanceOf::<T>::checked_mul(a, b))
 	}
 
 	pub(super) fn safe_div(
 		x: AssetBalanceOf<T>,
 		y: AssetBalanceOf<T>,
 	) -> Result<AssetBalanceOf<T>, DispatchError> {
-		Self::checked_operation(x, y, AssetBalanceOf::<T>::checked_div)
+		Self::checked_operation(&x, &y, |a, b| AssetBalanceOf::<T>::checked_div(a, b))
 	}
 
 	pub(super) fn safe_add(
 		x: AssetBalanceOf<T>,
 		y: AssetBalanceOf<T>,
 	) -> Result<AssetBalanceOf<T>, DispatchError> {
-		Self::checked_operation(x, y, AssetBalanceOf::<T>::checked_add)
+		Self::checked_operation(&x, &y, |a, b| AssetBalanceOf::<T>::checked_add(a, b))
 	}
 
 	pub(super) fn safe_sub(
 		x: AssetBalanceOf<T>,
 		y: AssetBalanceOf<T>,
 	) -> Result<AssetBalanceOf<T>, DispatchError> {
-		Self::checked_operation(x, y, AssetBalanceOf::<T>::checked_sub)
+		Self::checked_operation(&x, &y, |a, b| AssetBalanceOf::<T>::checked_sub(a, b))
+	}
+
+	pub(super) fn transfer_in(
+		&self,
+		asset: AssetIdOf<T>,
+		from: &AccountIdOf<T>,
+		amount: AssetBalanceOf<T>,
+	) -> Result<AssetBalanceOf<T>, DispatchError> {
+		T::Fungibles::transfer(asset, from, &self.manager, amount, Preservation::Expendable)
+	}
+
+	pub(super) fn transfer_out(
+		&self,
+		asset: AssetIdOf<T>,
+		to: &AccountIdOf<T>,
+		amount: AssetBalanceOf<T>,
+	) -> Result<AssetBalanceOf<T>, DispatchError> {
+		T::Fungibles::transfer(asset, &self.manager, to, amount, Preservation::Expendable)
+	}
+
+	pub(super) fn burn_lp(
+		&self,
+		who: &AccountIdOf<T>,
+		amount: AssetBalanceOf<T>,
+	) -> Result<AssetBalanceOf<T>, DispatchError> {
+		let lp_balance = T::Fungibles::balance(self.id, &who);
+		ensure!(lp_balance >= amount, Error::<T>::InsufficientBurnBalance);
+		T::Fungibles::burn_from(self.id, who, amount, Precision::Exact, Fortitude::Polite)
 	}
 }
