@@ -36,8 +36,8 @@ impl<T: Config> LiquidityPool<T> {
 		liquidity: AssetBalanceOf<T>,
 		who: &AccountIdOf<T>,
 	) -> DispatchResult {
+		// Calculate the amount of assets to return to the liquidity provider
 		let total_issuance = T::Fungibles::total_issuance(self.id.clone());
-
 		let ratio_a = Self::safe_mul(liquidity, self.asset_a_balance)?;
 		let ratio_b = Self::safe_mul(liquidity, self.asset_b_balance)?;
 		let amount_a = Self::safe_div(ratio_a, total_issuance)?;
@@ -77,6 +77,7 @@ impl<T: Config> LiquidityPool<T> {
 			Error::<T>::InsufficientLiquidity
 		);
 
+		// Swap the assets
 		let amount_out =
 			self.calculate_output_for(amount_in, token_in_reserve - amount_in, token_out_reserve)?;
 		self.transfer_in(asset_in, &who, amount_in)?;
@@ -116,6 +117,8 @@ impl<T: Config> LiquidityPool<T> {
 		let zero_balance = AssetBalanceOf::<T>::zero();
 
 		return if total_issuance == zero_balance {
+			// If there is no liquidity minted yet, then the liquidity is the
+			// sqrt of the product of the two amounts
 			let product = Self::safe_mul(amount_a, amount_b)?;
 			let min_liq: AssetBalanceOf<T> = T::MinimumLiquidity::get().into();
 			let product_sqrt = product.integer_sqrt();
@@ -128,7 +131,8 @@ impl<T: Config> LiquidityPool<T> {
 			)?;
 			Ok(liquidity)
 		} else {
-			// Get current reserved amounts for each asset
+			// When there is liquidity, calculate token_amount
+			// based on the reserved amounts for each asset
 			let a_ratio = Self::safe_mul(amount_a, total_issuance)?;
 			let token_a_amount = Self::safe_div(a_ratio, token_a_reserve)?;
 
