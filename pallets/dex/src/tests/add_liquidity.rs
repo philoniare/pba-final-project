@@ -55,6 +55,75 @@ fn mint_works() {
 }
 
 #[test]
+fn mint_works_with_same_asset_in_multiple_pools() {
+	let asset_a: AssetId = 1001;
+	let asset_b: AssetId = 1002;
+	let asset_c: AssetId = 1003;
+	let pool_id: AssetId = 10000;
+	let pool_id_2: AssetId = 10001;
+	let total: u128 = expand_to_decimals(100u128);
+	let amount_a: u128 = expand_to_decimals(1u128);
+	let amount_b: u128 = expand_to_decimals(4u128);
+	let amount_c: u128 = expand_to_decimals(10u128);
+	let burn_amount: u128 = expand_to_decimals(1u128);
+
+	ExtBuilder::default()
+		.with_endowed_balances(vec![
+			(asset_a, ALICE, total),
+			(asset_b, ALICE, total),
+			(asset_c, ALICE, total),
+		])
+		.build()
+		.execute_with(|| {
+			// Create pool for A - B
+			assert_ok!(Dex::mint(
+				RuntimeOrigin::signed(ALICE.into()),
+				pool_id,
+				asset_a,
+				asset_b,
+				amount_a,
+				amount_b
+			));
+
+			// Create pool for A - C
+			assert_ok!(Dex::mint(
+				RuntimeOrigin::signed(ALICE.into()),
+				pool_id_2,
+				asset_a,
+				asset_c,
+				amount_a,
+				amount_c
+			));
+
+			assert_ok!(Dex::burn(
+				RuntimeOrigin::signed(ALICE.into()),
+				asset_a,
+				asset_c,
+				burn_amount
+			));
+
+			// Removing from one pool shouldn't affect the reserves in another
+			let first_pool_key = AssetPair::new(asset_a, asset_b);
+			let first_pool = LiquidityPools::<Test>::get(first_pool_key).unwrap();
+
+			let second_pool_key = AssetPair::new(asset_a, asset_c);
+			let second_pool = LiquidityPools::<Test>::get(second_pool_key).unwrap();
+
+			// Balances in the first pool should not be affected
+			assert_eq!(first_pool.asset_a_balance, amount_a);
+			assert_eq!(first_pool.asset_b_balance, amount_b);
+
+			// Liquidity should be removed from second pool
+			assert_eq!(second_pool.asset_a_balance, 6837722340);
+			assert_eq!(second_pool.asset_b_balance, 68377223398);
+
+			// Pallet manager balances have been updated
+			assert_eq!(Fungibles::balance(asset_a, first_pool.manager), 16837722340);
+			assert_eq!(Fungibles::balance(asset_b, first_pool.manager), amount_b);
+		});
+}
+
+#[test]
 fn mint_works_increments_counter_on_multiple_pools() {
 	let asset_a: AssetId = 1001;
 	let asset_b: AssetId = 1002;
