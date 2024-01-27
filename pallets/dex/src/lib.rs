@@ -115,6 +115,8 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// There is not asset with the provided AssetId
 		UnknownAssetId,
+		/// Unable to mint the LP token because there is already an asset with the provided AssetId
+		AssetIdExists,
 		/// Liquidity Pool does not exist
 		LiquidityPoolDoesNotExist,
 		/// Overflow for asset id counter
@@ -182,6 +184,7 @@ pub mod pallet {
 				amount_a > AssetBalanceOf::<T>::zero() && amount_b > AssetBalanceOf::<T>::zero(),
 				Error::<T>::InsufficientInputAmount
 			);
+			ensure!(T::Fungibles::asset_exists(lp_asset_id) == false, Error::<T>::AssetIdExists);
 
 			let pool_asset_pair = AssetPair::new(asset_a.clone(), asset_b.clone());
 			let pallet_id: T::AccountId = T::PalletId::get().into_account_truncating();
@@ -273,10 +276,15 @@ pub mod pallet {
 				.ok_or_else(|| DispatchError::from(Error::<T>::LiquidityPoolDoesNotExist))?;
 
 			pool.remove_liquidity(&pool_asset_pair, token_amount, &who)?;
-			println!("Balance afterwards: {:?}", pool.asset_a_balance);
 
-			// Update the existing storage with new balances
-			<LiquidityPools<T>>::set(&pool_asset_pair, Some(pool.clone()));
+			// Clear up the pool if all liquidity is removed
+			let destroy_balance: AssetBalanceOf<T> = T::MinimumLiquidity::get().into();
+			if pool.asset_a_balance == destroy_balance && pool.asset_b_balance == destroy_balance {
+				<LiquidityPools<T>>::remove(&pool_asset_pair);
+			} else {
+				// Update the existing storage with new balances
+				<LiquidityPools<T>>::set(&pool_asset_pair, Some(pool.clone()));
+			}
 
 			Self::deposit_event(Event::LiquidityRemoved(
 				asset_a.clone(),

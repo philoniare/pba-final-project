@@ -51,7 +51,6 @@ impl<T: Config> LiquidityPool<T> {
 		self.transfer_out(asset_pair.asset_b, &who, amount_b)?;
 
 		// Update internal balances of the pool
-		println!("Burn Amount: {:?}, Current A: {:?}", amount_a, self.asset_a_balance);
 		self.asset_a_balance = Self::safe_sub(self.asset_a_balance, amount_a)?;
 		self.asset_b_balance = Self::safe_sub(self.asset_b_balance, amount_b)?;
 

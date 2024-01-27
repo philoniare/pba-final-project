@@ -34,19 +34,10 @@ fn burn_works() {
 			));
 
 			let pool_key = AssetPair::new(asset_a, asset_b);
-			let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
+			let pool = LiquidityPools::<Test>::get(pool_key);
 
-			// Internal pool balances should be updated
-			assert_eq!(pool.asset_a_balance, MIN_LIQUIDITY);
-			assert_eq!(pool.asset_b_balance, MIN_LIQUIDITY);
-
-			// Burning of LP tokens successful
-			assert_eq!(Fungibles::balance(pool.id, ALICE), 0);
-			assert_eq!(Fungibles::total_supply(pool.id), MIN_LIQUIDITY);
-
-			// Pallet manager balances have been updated
-			assert_eq!(Fungibles::balance(asset_a, pool.manager), MIN_LIQUIDITY);
-			assert_eq!(Fungibles::balance(asset_b, pool.manager), MIN_LIQUIDITY);
+			// Pool should be removed when all liquidity is drained
+			assert_eq!(pool, None);
 
 			let token_a_issuance = Fungibles::total_supply(asset_a);
 			let token_b_issuance = Fungibles::total_supply(asset_b);
@@ -128,14 +119,6 @@ fn burn_amounts_works_correctly() {
 		.build()
 		.execute_with(|| {
 			let expected_liquidity = expand_to_decimals(25u128);
-			println!("Amounts: {} {}", amount_a, amount_b);
-			println!(
-				"Amounts: {} {}",
-				Fungibles::balance(asset_a, ALICE),
-				Fungibles::balance(asset_b, ALICE)
-			);
-			println!("Assets: {} {}", asset_a, asset_b);
-
 			assert_ok!(Dex::mint(
 				RuntimeOrigin::signed(ALICE.into()),
 				pool_id,
@@ -145,7 +128,7 @@ fn burn_amounts_works_correctly() {
 				amount_b
 			));
 			let pool_key = AssetPair { asset_a, asset_b };
-			let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
+			let mut pool = LiquidityPools::<Test>::get(pool_key.clone()).unwrap();
 			assert_eq!(Fungibles::total_supply(pool.id), expand_to_decimals(20u128));
 
 			assert_ok!(Dex::mint(
@@ -158,7 +141,12 @@ fn burn_amounts_works_correctly() {
 			));
 
 			let burn_amount = expand_to_decimals(1u128);
+
+			// Internal pool balances should be updated
 			assert_ok!(Dex::burn(RuntimeOrigin::signed(ALICE), asset_a, asset_b, burn_amount));
+			pool = LiquidityPools::<Test>::get(pool_key).unwrap();
+			assert_eq!(pool.asset_a_balance, 576000000000);
+			assert_eq!(pool.asset_b_balance, 480000000000);
 
 			// Burning of LP tokens successful
 			assert_eq!(

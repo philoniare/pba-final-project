@@ -10,7 +10,6 @@ fn mint_works() {
 	let pool_id: AssetId = 10000;
 	let amount_a: u128 = expand_to_decimals(1u128);
 	let amount_b: u128 = expand_to_decimals(4u128);
-	println!("A: {:?}", amount_a);
 
 	ExtBuilder::default()
 		.with_endowed_balances(vec![(asset_a, ALICE, amount_a), (asset_b, ALICE, amount_b)])
