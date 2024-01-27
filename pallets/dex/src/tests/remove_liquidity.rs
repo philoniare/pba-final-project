@@ -26,15 +26,19 @@ fn burn_works() {
 				amount_b,
 			));
 
-			let pool_key = AssetPair::new(asset_a, asset_b);
-			let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
-
 			assert_ok!(Dex::burn(
 				RuntimeOrigin::signed(ALICE),
 				asset_a,
 				asset_b,
 				expected_liquidity
 			));
+
+			let pool_key = AssetPair::new(asset_a, asset_b);
+			let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
+
+			// Internal pool balances should be updated
+			assert_eq!(pool.asset_a_balance, MIN_LIQUIDITY);
+			assert_eq!(pool.asset_b_balance, MIN_LIQUIDITY);
 
 			// Burning of LP tokens successful
 			assert_eq!(Fungibles::balance(pool.id, ALICE), 0);

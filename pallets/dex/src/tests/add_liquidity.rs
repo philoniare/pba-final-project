@@ -29,6 +29,10 @@ fn mint_works() {
 			let pool_key = AssetPair::new(asset_a, asset_b);
 			let pool = LiquidityPools::<Test>::get(pool_key).unwrap();
 
+			// Internal balances should be updated
+			assert_eq!(pool.asset_a_balance, amount_a);
+			assert_eq!(pool.asset_b_balance, amount_b);
+
 			// Minting of LP Tokens occurred
 			assert_eq!(Fungibles::total_supply(pool.id), expected_liquidity);
 			assert_eq!(Fungibles::balance(pool.id, ALICE), expected_liquidity - MIN_LIQUIDITY);
